@@ -5,7 +5,7 @@ from pyswip import Prolog
 # Runs abalearn.pl and returns the associated subrpocess
 def set_up_abalearn():
     prolog = Prolog()
-    prolog.consult("abalearn.pl")
+    prolog.consult("../resources/abalearn.pl")
     return prolog
 
 
