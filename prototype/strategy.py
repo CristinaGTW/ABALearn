@@ -1,11 +1,7 @@
+from coverage.cover_utils import covered
 
 # Generalise the set of rules through Subsumption, Equality Removal or Folding
 def generalise(rules):
-    ...
-
-# If the given atom is covered by the framework, return True
-# Otherwise, return False.
-def covered(atom):
     ...
 
 
@@ -70,4 +66,5 @@ def abalearn(rules, pos_exs, neg_exs):
 
 
 if __name__=="__main__":
-    abalearn()
+    print(all_covered(["flies(a)"]))
+    # abalearn()
