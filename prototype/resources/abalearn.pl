@@ -1,17 +1,17 @@
 :- use_module(library(dialect/hprolog),
     [ memberchk_eq/2 ]).
 
-:- dynamic is_rule/3, pos/2, neg/2, contrary/2.
+:- dynamic my_rule/3, pos/2, neg/2, contrary/2.
 restart :- 
    reset_gensym,
-   retractall(is_rule(_,_,_)),
+   retractall(my_rule(_,_,_)),
    retractall(pos(_,_)),
    retractall(neg(_,_)),
    retractall(contrary(_,_)).
 
 
 /*
-Rules are represented by facts of the form is_rule(RuleId,H,B)
+Rules are represented by facts of the form my_rule(RuleId,H,B)
 where RuleId is the rule identifier, H is an atom, and B is a list
 of atoms.
 
@@ -34,7 +34,7 @@ rote_learn(N) :-
    eq_zip(Xs,Ts,Eqs),
    Head =..[Pred|Xs], 
    gensym(r_,R),
-   assert(is_rule(R,Head,Eqs)),
+   assert(my_rule(R,Head,Eqs)),
    nl, write('learnt rule:'), show_rule(R), nl. 
 
 % rote_learn all positive examples
@@ -55,11 +55,11 @@ eq_zip([X|Xs],[T|Ts],[X=T|Eqs]) :-
 %%%%% REMOVE EQUALITIES %%%%%%
 
 removeq(R,EqPos) :-
-   is_rule(R,H,B),
+   my_rule(R,H,B),
    nth1(EqPos,B,Eq,B1),
    Eq=(_=_),
    gensym(r_,R1),
-   replace(is_rule(R,H,B),is_rule(R1,H,B1)),
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
    nl, write('learnt rule:'), show_rule(R1), nl. 
 
 replace(P1,P2) :-
@@ -69,18 +69,18 @@ replace(P1,P2) :-
 %%%%% GENERALISE EQUALITIES %%%%%%
 
 geneqs(R) :-
-   is_rule(R,H,B),
+   my_rule(R,H,B),
    subsumes_chk_conj([X=T,Y=U],B,Subconj,Rest),
    Subconj=[X=T,Y=U],
    T==U,
    B1=[X=Y|Rest], 
    gensym(r_,R1),
-   replace(is_rule(R,H,B),is_rule(R1,H,B1)),
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
    nl, write('learnt rule:'), show_rule(R1), nl. 
 
 /* Tests
 
-is_rule(r_20,p(X,Y,Z),[X=a,Y=b,Z=a]).
+my_rule(r_20,p(X,Y,Z),[X=a,Y=b,Z=a]).
 
 ?- geneqs(r_20).
 
@@ -95,13 +95,13 @@ true .
 
 /*
 fold(R1,R2) :-                    
-   is_rule(R1,H1,B1),
-   is_rule(R2,H2,B2),
+   my_rule(R1,H1,B1),
+   my_rule(R2,H2,B2),
    subsumes_chk_conj(B2,B1,Subconj,Rest),
    B2=Subconj,
    append([H2],Rest,NewB),
    gensym(r,R3),
-   replace(is_rule(R1,H1,B1),is_rule(R3,H1,NewB)),
+   replace(my_rule(R1,H1,B1),my_rule(R3,H1,NewB)),
    nl, write('learnt rule:'), show_rule(R3), nl. 
 */
    
@@ -110,8 +110,8 @@ fold(R1,R2) :-
 
 fold(R1,R2) :-
    R1\=R2,                    
-   is_rule(R1,H,Bd1),
-   is_rule(R2,K,Bd2),
+   my_rule(R1,H,Bd1),
+   my_rule(R2,K,Bd2),
    term_variables(K,VK),
    hdequalities(VK,Bd2,Eqs2,Eqs1B1),
    select_sublist(Eqs2,SEqs2,REqs2),
@@ -121,7 +121,7 @@ fold(R1,R2) :-
    append(REqs2,[K],NewB),
    append(NewB,Rest,B3),
    gensym(r_,R3),
-   replace(is_rule(R1,H,Bd1),is_rule(R3,H,B3)),
+   replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)),
    nl, write('learnt rule:'), show_rule(R3), nl. 
 
 hdequalities(VK,Bd2,Eqs2,Eqs1B1) :- hdequalities_acc(VK,Bd2,[],Eqs2,[],Eqs1B1).
@@ -139,12 +139,12 @@ hdequalities_acc(VK,[A|As],AccEqs,Eqs,AccR,R) :-
 
 /* Tests
 
-is_rule(r9,p(X,Y),[X=a,Y=b,s(X)]).
-is_rule(r10,p(X,Y),[X=a,r(Y),s(X)]).
-is_rule(r11,h,[Y=Z,p(Z)]).
-is_rule(r12,k,[X=Y,Z=a]).
-is_rule(r13,k(Z),[X=Y,Z=a]).
-is_rule(r14,k(Z),[X=Z,Z=a]).
+my_rule(r9,p(X,Y),[X=a,Y=b,s(X)]).
+my_rule(r10,p(X,Y),[X=a,r(Y),s(X)]).
+my_rule(r11,h,[Y=Z,p(Z)]).
+my_rule(r12,k,[X=Y,Z=a]).
+my_rule(r13,k(Z),[X=Y,Z=a]).
+my_rule(r14,k(Z),[X=Z,Z=a]).
 
 ?- fold(r10,r9).
 
@@ -170,17 +170,17 @@ false.
 % To be automated: Based on unfolding?
 
 rem_rule(R) :-
-   retract(is_rule(R,_H,_B)).
+   retract(my_rule(R,_H,_B)).
 add_rule(H,B) :-
    gensym(r_,R),
-   assert(is_rule(R,H,B)).
+   assert(my_rule(R,H,B)).
 
 
 
 %%%% ASSUMPTION INTRODUCTION via undercutting %%%%%
 
 undercut(R,AtomPos) :-
-   is_rule(R,H,B),
+   my_rule(R,H,B),
    atoms(AtomPos,B,As),
    term_variables(As,Vs),
    gensym(alpha,Alpha),
@@ -190,7 +190,7 @@ undercut(R,AtomPos) :-
    assert(contrary(Asm,CAsm)),
    append(B,[Asm],B1),
    gensym(r_,R1),
-   replace(is_rule(R,H,B),is_rule(R1,H,B1)),
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
    nl, write('learnt rule:'), show_rule(R1), nl,
    write('where '), numbervars((Asm,CAsm)), write(contrary(Asm,CAsm)), nl. 
 
@@ -213,7 +213,7 @@ rem_neg(N) :- retract(neg(N,_A)).
 % show current rules in the database
 
 show_rules :-
-   \+ is_rule(_,_,_), !, 
+   \+ my_rule(_,_,_), !, 
    write('no rules').
 show_rules :-
    show_rule(_),
@@ -224,9 +224,13 @@ show_rules.
 % show rule with identifier N 
 
 show_rule(N) :-
-   is_rule(N,H,B),
+   my_rule(N,H,B),
    numbervars((H,B)),
    nl, write(N), write(': '), write(H), write(' <- '), write_conj(B).
+
+get_rules(N,H,B) :-
+   my_rule(N,H,B),
+   numbervars((H,B)).
 
 
 % output a conjunction of atoms
