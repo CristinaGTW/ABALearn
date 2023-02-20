@@ -17,7 +17,7 @@ accepted(Ex):-
 
 % (C,[C]) is an argument if C is an assumption
 argument((Asm,[Asm])) :-
-    myAsm(Asm).
+    my_asm(Asm).
 % (C,A) is an argument if there is a rule for C which can be applied,
 % i.e. if the body literals are justified (derivable)
 argument((Conc,Asm)) :-
@@ -51,5 +51,3 @@ attacks((ConcA,AsmA),(ConcB,AsmB)) :-
     contrary(OneAsm,ConcA),
     argument((ConcB,AsmB)),
     member(OneAsm,AsmB).
-
-

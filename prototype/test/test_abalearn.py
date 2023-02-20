@@ -8,4 +8,4 @@ def test_add_rule():
     rules = get_rules(prolog)
 
     assert len(rules) == 1
-    assert rules[0] == "r_1: bird(A) <- penguin(A)"
+    assert rules[0] == "r_1: bird($VAR(0))<-penguin($VAR(0))"

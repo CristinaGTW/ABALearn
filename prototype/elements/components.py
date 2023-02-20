@@ -19,6 +19,11 @@ class Atom:
         args_str = args_str[:-1]
         return self.predicate + "(" + args_str + ")"
 
+    def to_prolog_asm(atom):
+        return f"my_asm({atom})."
+
+    def to_prolog_contrary(atom,c_atom):
+        return f"contrary({atom},{c_atom})."
 
 @dataclass
 class Rule:
@@ -34,6 +39,13 @@ class Rule:
         body = [Atom.parse_atom(x) for x in body_str.split(",")]
         return Rule(rule_id, head, body)
 
+    def to_prolog(self) -> str:
+        body_str = ""
+        for x in self.body:
+            body_str += str(x) + ','
+        body_str = body_str[:-1]
+        res = f"my_rule({self.rule_id},{self.head},[{body_str}])."
+        return res
 
     def __str__(self):
         body_str = ""
@@ -53,6 +65,11 @@ class Example:
         fact = Atom.parse_atom(example_def)
         return Example(example_id, fact)
 
+    def to_prolog_pos(self):
+        return f"pos({self.example_id},{self.fact})."
     
+    def to_prolog_neg(self):
+        return f"neg({self.example_id},{self.fact})."
+
     def __str__(self):
         return self.example_id + ":" + str(self.fact)
