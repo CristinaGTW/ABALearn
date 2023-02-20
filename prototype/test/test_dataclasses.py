@@ -1,4 +1,4 @@
-from elements.components import Atom, Rule, Example
+from elements.components import Atom, Rule, Example, Equality
 
 ##### ATOM TESTS
 
@@ -27,10 +27,10 @@ def test_atom_to_prolog_contrary():
 ##### RULE TESTS
 
 def test_parse_rule():
-    rule = Rule.parse_rule("r_1:bird(X)<-penguin(X)")
+    rule = Rule.parse_rule("r_1:bird(X)<-penguin(X),X=a")
     assert rule.rule_id == "r_1"
     assert rule.head == Atom("bird", ["X"])
-    assert rule.body == [Atom("penguin", ["X"])]
+    assert rule.body == [Atom("penguin", ["X"]), Equality("X","a")]
 
 def test_rule_to_str():
     rule = Rule("r_1", Atom("bird", ["X"]), [Atom("penguin", ["X"])])

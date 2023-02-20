@@ -8,13 +8,12 @@ def generalise(rules):
 # If ALL atoms in the given list are covered by the framework, return True
 # Otherwise, return False.
 def all_covered(atoms):
-    return all(covered(atom) for atom in atoms)
-
+    return covered(atoms)
 
 # If ALL atoms in the given list are NOT covered by the framework, return True
 # Otherwise, return False.
 def none_covered(atoms):
-    return all(not covered(atom) for atom in atoms)
+    return not covered(atoms)
 
 
 #  If we can construct an argument for atom p, then return the identifier of the top rule of that argument;

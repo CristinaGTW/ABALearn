@@ -29,14 +29,14 @@ class Atom:
 class Rule:
     rule_id: str
     head: Atom
-    body: list[Atom]
+    body: list[Atom|Equality]
 
     
     def parse_rule(input: str) -> Rule:
         (rule_id,_,rule_def) = input.partition(":")
         (head_str,_,body_str) = rule_def.partition("<-")
         head = Atom.parse_atom(head_str)
-        body = [Atom.parse_atom(x) for x in body_str.split(",")]
+        body = [Equality.parse_equality(x) if '=' in x else Atom.parse_atom(x) for x in body_str.split(",")]
         return Rule(rule_id, head, body)
 
     def to_prolog(self) -> str:
@@ -73,3 +73,15 @@ class Example:
 
     def __str__(self):
         return self.example_id + ":" + str(self.fact)
+
+@dataclass
+class Equality:
+    var_1: str
+    var_2: str
+
+    def parse_equality(input:str) -> Equality:
+        var_1,_,var_2 = input.partition("=")
+        return Equality(var_1, var_2)
+
+    def __str__(self):
+        return self.var_1 + "=" + self.var_2
