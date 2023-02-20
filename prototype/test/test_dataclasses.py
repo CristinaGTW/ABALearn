@@ -33,9 +33,9 @@ def test_parse_rule():
     assert rule.body == [Atom("penguin", ["X"]), Equality("X","a")]
 
 def test_rule_to_str():
-    rule = Rule("r_1", Atom("bird", ["X"]), [Atom("penguin", ["X"])])
+    rule = Rule("r_1", Atom("bird", ["X"]), [Atom("penguin", ["X"]), Equality("X","a")])
     rule_str = str(rule)
-    assert rule_str == "r_1:bird(X)<-penguin(X)"
+    assert rule_str == "r_1:bird(X)<-penguin(X),X=a"
 
 def test_rule_to_prolog():
     rule = Rule("r_1", Atom("bird", ["X"]), [Atom("penguin", ["X"])])

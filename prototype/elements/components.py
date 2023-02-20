@@ -8,7 +8,7 @@ class Atom:
     arguments: list[str]
 
     def parse_atom(input: str) -> Atom:
-        predicate, arguments_str = input[:-1].split("(")
+        predicate, arguments_str = input[:-1].split("(",1)
         arguments = arguments_str.split(",")
         return Atom(predicate, arguments) 
 
@@ -36,7 +36,21 @@ class Rule:
         (rule_id,_,rule_def) = input.partition(":")
         (head_str,_,body_str) = rule_def.partition("<-")
         head = Atom.parse_atom(head_str)
-        body = [Equality.parse_equality(x) if '=' in x else Atom.parse_atom(x) for x in body_str.split(",")]
+        print(body_str)
+        splits = body_str.split(",")
+        body = []
+        skip = False
+        for i in range(len(splits)):
+            if skip:
+                skip = False
+                continue
+            if splits[i][0] == '=':
+                body.append(Equality(splits[i][2:], splits[i+1][-1]))
+                skip = True
+            elif '=' in splits[i]:
+                body.append(Equality.parse_equality(splits[i]))
+            else:
+                body.append(Atom.parse_atom(splits[i]))
         return Rule(rule_id, head, body)
 
     def to_prolog(self) -> str:
@@ -59,7 +73,12 @@ class Example:
     example_id: str
     fact: Atom
 
-    
+    def get_predicate(self):
+        return self.fact.predicate
+
+    def get_arity(self):
+        return len(self.fact.arguments)
+
     def parse_example(input: str) -> Example:
         example_id,_,example_def = input.partition(":")
         fact = Atom.parse_atom(example_def)

@@ -212,18 +212,18 @@ rem_neg(N) :- retract(neg(N,_A)).
 
 % show current rules in the database
 
-show_rules :-
-   \+ my_rule(_,_,_), !, 
+show_rules(N,H,B) :-
+   \+ my_rule(N,H,B), !, 
    write('no rules').
-show_rules :-
-   show_rule(_),
+show_rules(N,H,B) :-
+   show_rule(N,H,B),
    fail.
-show_rules.
+?\show_rules(N,H,B).
 
 
 % show rule with identifier N 
 
-show_rule(N) :-
+show_rule(N,H,B) :-
    my_rule(N,H,B),
    numbervars((H,B)),
    nl, write(N), write(': '), write(H), write(' <- '), write_conj(B).
