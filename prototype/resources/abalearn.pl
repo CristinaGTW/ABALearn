@@ -1,7 +1,7 @@
 :- use_module(library(dialect/hprolog),
     [ memberchk_eq/2 ]).
 
-:- dynamic my_rule/3, pos/2, neg/2, contrary/2.
+:- dynamic my_rule/3, pos/2, neg/2, contrary/2, my_asm/1.
 restart :- 
    reset_gensym,
    retractall(my_rule(_,_,_)),
@@ -34,8 +34,7 @@ rote_learn(N) :-
    eq_zip(Xs,Ts,Eqs),
    Head =..[Pred|Xs], 
    gensym(r_,R),
-   assert(my_rule(R,Head,Eqs)),
-   nl, write('learnt rule:'), show_rule(R), nl. 
+   assert(my_rule(R,Head,Eqs)).
 
 % rote_learn all positive examples
 
@@ -59,8 +58,7 @@ removeq(R,EqPos) :-
    nth1(EqPos,B,Eq,B1),
    Eq=(_=_),
    gensym(r_,R1),
-   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
-   nl, write('learnt rule:'), show_rule(R1), nl. 
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)).
 
 replace(P1,P2) :-
    retract(P1),
@@ -75,8 +73,7 @@ geneqs(R) :-
    T==U,
    B1=[X=Y|Rest], 
    gensym(r_,R1),
-   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
-   nl, write('learnt rule:'), show_rule(R1), nl. 
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)).
 
 /* Tests
 
@@ -121,8 +118,7 @@ fold(R1,R2) :-
    append(REqs2,[K],NewB),
    append(NewB,Rest,B3),
    gensym(r_,R3),
-   replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)),
-   nl, write('learnt rule:'), show_rule(R3), nl. 
+   replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)).
 
 hdequalities(VK,Bd2,Eqs2,Eqs1B1) :- hdequalities_acc(VK,Bd2,[],Eqs2,[],Eqs1B1).
    
@@ -187,12 +183,11 @@ undercut(R,AtomPos) :-
    gensym(c_alpha,CAlpha),
    Asm=..[Alpha|Vs],
    CAsm=..[CAlpha|Vs],
+   assert(my_asm(Asm)),
    assert(contrary(Asm,CAsm)),
    append(B,[Asm],B1),
    gensym(r_,R1),
-   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
-   nl, write('learnt rule:'), show_rule(R1), nl,
-   write('where '), numbervars((Asm,CAsm)), write(contrary(Asm,CAsm)), nl. 
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)).
 
 
 atoms([],_B,[]).
@@ -212,13 +207,13 @@ rem_neg(N) :- retract(neg(N,_A)).
 
 % show current rules in the database
 
-show_rules(N,H,B) :-
-   \+ my_rule(N,H,B), !, 
+show_rules :-
+   \+ my_rule(_,_,_), !, 
    write('no rules').
-show_rules(N,H,B) :-
+show_rules :-
    show_rule(N,H,B),
    fail.
-?\show_rules(N,H,B).
+show_rules.
 
 
 % show rule with identifier N 

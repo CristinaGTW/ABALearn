@@ -45,7 +45,7 @@ class Rule:
                 skip = False
                 continue
             if splits[i][0] == '=':
-                body.append(Equality(splits[i][2:], splits[i+1][-1]))
+                body.append(Equality(splits[i][2:], splits[i+1][:-1]))
                 skip = True
             elif '=' in splits[i]:
                 body.append(Equality.parse_equality(splits[i]))

@@ -1,5 +1,6 @@
 from pyswip import Prolog
-from elements.components import Rule
+from elements.aba_framework import ABAFramework
+from elements.components import Rule, Example, Atom
 
 def set_up_abalearn(input_file_path):
     prolog = Prolog()
@@ -16,13 +17,22 @@ def add_rule(prolog, rule):
     query = f"add_rule({str(rule.head)},{body})."
     list(prolog.query(query))
 
+def add_pos_ex(prolog, ex_atom):
+    query = f"add_pos({ex_atom})."
+    list(prolog.query(query))   
+
+def add_neg_ex(prolog, ex_atom):
+    query = f"add_neg({ex_atom})."
+    list(prolog.query(query))   
+
+
 
 def rote_learn(prolog,example_id):
     query = f"rote_learn({example_id})."
     list(prolog.query(query))
 
 def rote_learn_all(prolog,predicate,arity):
-    query = f"rote_learn_all({predicate},{arity})."
+    query = f"rote_learn_all({predicate}/{arity})."
     list(prolog.query(query))
 
 def remove_eq(prolog, rule_id, eq_pos):
@@ -49,5 +59,39 @@ def get_rules(prolog):
         all_rules.append(Rule.parse_rule(rule_str))  
     return all_rules
 
+def get_positive_examples(prolog):
+    result = list(prolog.query("pos(N,E)."))
+    pos_exs = []
+    for ex in result:
+        pos_exs.append(Example(ex['N'], Atom.parse_atom(ex['E'])))
+    return pos_exs
+
+def get_negative_examples(prolog):
+    result = list(prolog.query("neg(N,E)."))
+    neg_exs = []
+    for ex in result:
+        neg_exs.append(Example(ex['N'], Atom.parse_atom(ex['E'])))
+    return neg_exs
+
+def get_contraries(prolog):
+    result = list(prolog.query("contrary(A,B)."))
+    contraries = []
+    for contrary in result:
+        contraries.append(Atom.parse_atom(contrary['A']), Atom.parse_atom(contrary['B']))
+    return contraries
+
+
+def get_assumptions(prolog):
+    result = list(prolog.query("my_asm(A)."))
+    asms = []
+    for asm in result:
+        asms.append(Atom.parse_atom(asm['A']))
+    return asms
+
 def get_current_aba_framework(prolog):
     rules = get_rules(prolog)
+    pos_exs = get_positive_examples(prolog)
+    neg_exs = get_negative_examples(prolog)
+    assumptions = get_assumptions(prolog)
+    contraries = get_contraries(prolog)
+    return ABAFramework(rules, pos_exs, neg_exs, assumptions, contraries)
