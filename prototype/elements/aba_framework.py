@@ -29,20 +29,20 @@ class ABAFramework:
 
         
         content += "\n% Assumptions \n"        
-        # if len(self.assumptions) == 0:
-        #     content += "% my_asm(_) placeholder \n"
-        #     content += "my_asm(fake_asm(X)). \n"
-        # else:
-        for assumption in self.assumptions:
-            content += assumption.to_prolog_asm() + '\n'
+        if len(self.assumptions) == 0:
+            content += "% my_asm(_) placeholder \n"
+            content += "my_asm(fake_asm(X)). \n"
+        else:
+            for assumption in self.assumptions:
+                content += assumption.to_prolog_asm() + '\n'
         
         
         content += "\n% Contraries \n"   
-        # if len(self.assumptions) == 0:
-        #     content += "% contrary(_,_) placeholder \n"
-        #     content += "contrary(fake_alpha(X),fake_c_alpha(X)). \n"     
-        # else:
-        for contrary in self.contraries:
-            content += contrary[0].to_prolog_contrary(contrary[1]) + '\n'
-        
+        if len(self.assumptions) == 0:
+            content += "% contrary(_,_) placeholder \n"
+            content += "contrary(fake_alpha(X),fake_c_alpha(X)). \n"     
+        else:
+            for contrary in self.contraries:
+                content += contrary[0].to_prolog_contrary(contrary[1]) + '\n'
+            
         return content

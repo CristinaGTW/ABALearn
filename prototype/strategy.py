@@ -1,22 +1,60 @@
-from coverage.cover_utils import covered
-from transformations.learn_utils import get_rules, add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, undercut, set_up_abalearn, rote_learn_all, fold, get_current_aba_framework
+from coverage.cover_utils import covered, get_covered_solutions
+from transformations.learn_utils import get_rules, add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, undercut, set_up_abalearn, rote_learn_all, fold, get_current_aba_framework, rem_rule
 from elements.aba_framework import ABAFramework
-from elements.components import Atom
+from elements.components import Atom, Equality
 import sys
+import os
 
 
-# If ALL atoms in the given list are covered by the framework, return True
+# If all positive examples in the given framework are covered, return True
 # Otherwise, return False.
-def all_covered(aba_framework,atoms):
+def complete(aba_framework):
     aba_framework.create_file("check.pl")
-    return covered("check.pl",atoms)
+    ret = covered("check.pl", aba_framework.positive_examples)
+    os.remove("check.pl")
+    return ret
 
-# If ALL atoms in the given list are NOT covered by the framework, return True
+# If all negative examples in the given framework are NOT covered, return True
 # Otherwise, return False.
-def none_covered(aba_framework,atoms):
+def consistent(aba_framework):
     aba_framework.create_file("check.pl")
-    return not covered("check.pl",atoms)
+    for ex in aba_framework.negative_examples:
+        if covered("check.pl", [ex]):
+            os.remove("check.pl")
+            return False
+    os.remove("check.pl")
+    return True
 
+def get_solutions(rule, aba_framework):
+    for eq in rule.body:
+        if isinstance(eq, Equality):
+            if eq.var_1 in rule.head.arguments:
+                rule.head.arguments = rule.head.replace(eq.var_1, eq.var_2)
+    if all([arg.islower() for arg in rule.head.arguments]):
+        return rule.head.arguments
+
+    
+    sols = get_covered_solutions(aba_framework, rule.head)
+    return sols
+
+def remove_subsumed(prolog, aba_framework) -> ABAFramework:
+    i = 0
+    length = len(aba_framework.background_knowledge)
+    while i < length:
+        rule = aba_framework.background_knowledge[i]
+        sols = get_solutions(rule, aba_framework)
+        aba_framework.remove(rule)
+        i -= 1
+        length -= 1
+        sols_without_rule = get_covered_solutions(aba_framework, rule.head)
+        if set(sols) == set(sols_without_rule):
+            rem_rule(prolog, rule.rule_id)
+        else:
+            i += 1
+            length += 1
+            aba_framework.background_knowledge.insert(i, rule)
+        i += 1
+    return get_current_aba_framework(prolog)
 
 def get_constants(aba_framework, target):
     pos_ex_consts = []
@@ -92,45 +130,43 @@ def add_examples(prolog, predicate, pos_consts, neg_consts) -> ABAFramework:
 
 def abalearn(prolog):
     aba_framework = get_current_aba_framework(prolog)
+    count = 0
+    while not(complete(aba_framework) and consistent(aba_framework)):
+        # Select target p for current iteration
+        target = select_target(aba_framework.positive_examples)
+        
+        # Generate rules for p via Rote Learning
+        aba_framework = generate_rules(prolog, target)
 
-   # while not(all_covered(aba_framework.positive_examples) and none_covered(aba_framework.negative_examples)):
-    # Select target p for current iteration
-    target = select_target(aba_framework.positive_examples)
-    
-    # Generate rules for p via Rote Learning
-    aba_framework = generate_rules(prolog, target)
+        # Generalise via folding
+        aba_framework = fold_rule(prolog,aba_framework.background_knowledge)
 
-    # Generalise via folding
-    aba_framework = fold_rule(prolog,aba_framework.background_knowledge)
+        ### TODO:
+        ## Generalise via subsumption
+        aba_framework = remove_subsumed(prolog, aba_framework)
 
-    ### TODO:
-    ## Generalise via subsumption
-    # remove_subsumed(prolog)
+        # At this point all positive examples should be covered
+        assert complete(aba_framework)
 
-    # At this point all positive examples should be covered
-    assert all_covered(aba_framework,aba_framework.positive_examples)
+        # Learn exceptions
+        # Choose a rule that is a top rule in an argument for one of the negative examples
+        chosen_rule = aba_framework.background_knowledge[-1] # Currently chooses last rule which should be the one obtained from folding TODO: Properly choose it
+        # Choose which variables to consider
+        idxs = list(range(1,len(chosen_rule.head.arguments)+1)) # Currently takes in consideration all the arguments present in the head of the rule
+        # Construct the two sets of constants consts(A+) and consts(A-)
+        (a_plus, a_minus) = get_constants(aba_framework, target.get_predicate())
+        # Perform assumption introduction via undercutting
+        aba_framework = assumption_introduction(prolog,chosen_rule,idxs) 
 
-    # Learn exceptions
-    # Choose a rule that is a top rule in an argument for one of the negative examples
-    chosen_rule = aba_framework.background_knowledge[-1] # Currently chooses last rule which should be the one obtained from folding TODO: Properly choose it
-    # Choose which variables to consider
-    idxs = list(range(1,len(chosen_rule.head.arguments)+1)) # Currently takes in consideration all the arguments present in the head of the rule
-    # Construct the two sets of constants consts(A+) and consts(A-)
-    (a_plus, a_minus) = get_constants(aba_framework, target.get_predicate())
-    # Perform assumption introduction via undercutting
-    aba_framework = assumption_introduction(prolog,chosen_rule,idxs) 
+        # Add negative and positive examples for the contraries introduced
+        (a,c_a) = aba_framework.contraries[-1]
+        aba_framework = add_examples(prolog, c_a.predicate, a_plus, a_minus)
 
-    # At this point all negative examples should not be covered anymore
-    assert none_covered(aba_framework,aba_framework.negative_examples)
+        # Remove examples about target
+        aba_framework = remove_all_examples(prolog, aba_framework, target.get_predicate())
 
-    # Add negative and positive examples for the contraries introduced
-    (a,c_a) = aba_framework.contraries[-1]
-    aba_framework = add_examples(prolog, c_a.predicate, a_plus, a_minus)
-
-    # Remove examples about target
-    aba_framework = remove_all_examples(prolog, aba_framework, target.get_predicate())
-
-    aba_framework.create_file("progress.pl")    
+        aba_framework.create_file(f"progress{count}.pl")    
+        count += 1
 
 
 

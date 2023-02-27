@@ -33,6 +33,9 @@ def rem_neg_ex(prolog, ex_id):
     query = f"rem_neg({ex_id})."
     list(prolog.query(query))   
 
+def rem_rule(prolog, rule_id):
+    query = f"rem_rule({rule_id})."
+    list(prolog.query(query))   
 
 
 def rote_learn(prolog,example_id):
