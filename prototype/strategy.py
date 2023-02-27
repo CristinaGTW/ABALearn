@@ -8,17 +8,17 @@ import os
 
 # If all positive examples in the given framework are covered, return True
 # Otherwise, return False.
-def complete(aba_framework):
+def complete(aba_framework, pos_ex):
     aba_framework.create_file("check.pl")
-    ret = covered("check.pl", aba_framework.positive_examples)
+    ret = covered("check.pl", pos_ex)
     os.remove("check.pl")
     return ret
 
 # If all negative examples in the given framework are NOT covered, return True
 # Otherwise, return False.
-def consistent(aba_framework):
+def consistent(aba_framework, neg_ex):
     aba_framework.create_file("check.pl")
-    for ex in aba_framework.negative_examples:
+    for ex in neg_ex:
         if covered("check.pl", [ex]):
             os.remove("check.pl")
             return False
@@ -26,12 +26,14 @@ def consistent(aba_framework):
     return True
 
 def get_solutions(rule, aba_framework):
+    if all([arg.islower() for arg in rule.head.arguments]):
+        return [tuple(replace_args)]
+    replace_args = []
     for eq in rule.body:
         if isinstance(eq, Equality):
-            if eq.var_1 in rule.head.arguments:
-                rule.head.arguments = rule.head.replace(eq.var_1, eq.var_2)
-    if all([arg.islower() for arg in rule.head.arguments]):
-        return rule.head.arguments
+            replace_args = [arg if arg != eq.var_1 else eq.var_2 for arg in rule.head.arguments]
+    if all([arg.islower() for arg in replace_args]) and len(replace_args) > 0:
+        return [tuple(replace_args)]
 
     
     sols = get_covered_solutions(aba_framework, rule.head)
@@ -40,21 +42,25 @@ def get_solutions(rule, aba_framework):
 def remove_subsumed(prolog, aba_framework) -> ABAFramework:
     i = 0
     length = len(aba_framework.background_knowledge)
+    aba_framework.create_file(f"before_check.pl")  
     while i < length:
         rule = aba_framework.background_knowledge[i]
         sols = get_solutions(rule, aba_framework)
-        aba_framework.remove(rule)
+        aba_framework.background_knowledge.remove(rule)
         i -= 1
         length -= 1
         sols_without_rule = get_covered_solutions(aba_framework, rule.head)
-        if set(sols) == set(sols_without_rule):
+        if set(sols).issubset(set(sols_without_rule)) and len(sols) > 0:
+            print(f"Removing rule {rule.rule_id} as it is subsumed by some other rule")
             rem_rule(prolog, rule.rule_id)
         else:
             i += 1
             length += 1
             aba_framework.background_knowledge.insert(i, rule)
         i += 1
-    return get_current_aba_framework(prolog)
+    aba_framework = get_current_aba_framework(prolog)
+    aba_framework.create_file(f"after_check.pl")  
+    return aba_framework
 
 def get_constants(aba_framework, target):
     pos_ex_consts = []
@@ -131,7 +137,9 @@ def add_examples(prolog, predicate, pos_consts, neg_consts) -> ABAFramework:
 def abalearn(prolog):
     aba_framework = get_current_aba_framework(prolog)
     count = 0
-    while not(complete(aba_framework) and consistent(aba_framework)):
+    initial_pos_ex = aba_framework.positive_examples
+    initial_neg_ex = aba_framework.negative_examples
+    while not(complete(aba_framework, initial_pos_ex) and consistent(aba_framework, initial_neg_ex)):
         # Select target p for current iteration
         target = select_target(aba_framework.positive_examples)
         
@@ -141,12 +149,8 @@ def abalearn(prolog):
         # Generalise via folding
         aba_framework = fold_rule(prolog,aba_framework.background_knowledge)
 
-        ### TODO:
         ## Generalise via subsumption
         aba_framework = remove_subsumed(prolog, aba_framework)
-
-        # At this point all positive examples should be covered
-        assert complete(aba_framework)
 
         # Learn exceptions
         # Choose a rule that is a top rule in an argument for one of the negative examples

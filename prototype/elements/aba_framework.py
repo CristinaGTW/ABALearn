@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from elements.components import Rule, Example, Atom
+from elements.components import Rule, Example, Atom, Equality
 @dataclass
 class ABAFramework:
     background_knowledge: list[Rule]
@@ -46,3 +46,23 @@ class ABAFramework:
                 content += contrary[0].to_prolog_contrary(contrary[1]) + '\n'
             
         return content
+
+    def get_language_size(self):
+        variables = []
+        for rule in self.background_knowledge:
+            for arg in rule.head.arguments:
+                if arg.islower():
+                    variables.append(arg)
+            for x in rule.body:
+                if isinstance(x, Atom):
+                    for arg in x.arguments:
+                        if arg.islower():
+                            variables.append(arg)
+                else:
+                    assert isinstance(x, Equality)
+                    variables.append(x.var_2)
+        for examples in self.positive_examples + self.negative_examples:
+            for arg in examples.fact.arguments:
+                if arg.islower():
+                    variables.append(arg)
+        return len(set(variables))

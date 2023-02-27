@@ -1,6 +1,8 @@
 from subprocess import Popen, PIPE
 import os
 
+SAFETY_FACTOR = 5
+
 def covered(input_file_path, exs):
     with Popen(['/bin/bash', '-c', f'sicstus -l prototype/resources/coverage.pl -l {input_file_path}'], stdout=PIPE, stdin=PIPE, stderr=PIPE) as p:
         exs_str = ""
@@ -20,31 +22,28 @@ def covered(input_file_path, exs):
 def get_covered_solutions(aba_framework, atom):
     aba_framework.create_file("check.pl")
     sols = []
+    size = aba_framework.get_language_size() * SAFETY_FACTOR
     with Popen(['/bin/bash', '-c', f'sicstus -l prototype/resources/coverage.pl -l check.pl'], stdout=PIPE, stdin=PIPE, stderr=PIPE) as p:
         query = f"covered([{atom}])."
+        for _ in range(size):
+            query += "\n;"
         p.stdin.write(str.encode(query))
         (stdout,stderr) = p.communicate()
-        breakpoint()
         output = stderr.decode("utf-8")
-        sol = get_sol(output, atom.arguments)
-        while output != "no":
+        while output.find(" = ") != -1:
+            (output, sol) = get_sol(output, atom.arguments)
             sols.append(sol)
-            p.stdin.write(str.encode(";"))
-            (stdout,stderr) = p.communicate()
-            output = stderr.decode("utf-8")
-            result = output.splitlines()[-1]
-        p.stdin.close()
-    os.remove("check.pl")
+    os.remove("check.pl") 
     return sols
 
 
 def get_sol(output, variables):
-    sol = {}
+    sol = []
     for var in variables:
         idx = output.find(f"{var} = ")
         idx_2 = output[idx:].find("?")
-        sol[var] = output[(idx+4):(idx + idx_2-1)]
+        sol.append(output[(idx+4):(idx + idx_2-1)])
         output = output[(idx + idx_2):]
-    return sol
+    return (output, tuple(sol))
 
 
