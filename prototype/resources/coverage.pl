@@ -4,6 +4,7 @@
 :- use_module(library(sets)).
 :- use_module(library(ordsets)).
 
+:- dynamic contrary/2, my_asm/1.
 
 covered([]).
 covered([Ex|RestEx]):-

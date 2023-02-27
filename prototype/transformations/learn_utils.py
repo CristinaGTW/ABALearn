@@ -25,6 +25,14 @@ def add_neg_ex(prolog, ex_atom):
     query = f"add_neg({ex_atom})."
     list(prolog.query(query))   
 
+def rem_pos_ex(prolog, ex_id):
+    query = f"rem_pos({ex_id})."
+    list(prolog.query(query))   
+
+def rem_neg_ex(prolog, ex_id):
+    query = f"rem_neg({ex_id})."
+    list(prolog.query(query))   
+
 
 
 def rote_learn(prolog,example_id):
@@ -43,7 +51,7 @@ def fold(prolog, rule_id_1, rule_id_2):
     query = f"fold({rule_id_1},{rule_id_2})."
     list(prolog.query(query))
 
-def assumption_introduction(prolog, rule_id, atom_pos):
+def undercut(prolog, rule_id, atom_pos):
     query = f"undercut({rule_id},{atom_pos})."
     list(prolog.query(query))
 
@@ -77,7 +85,7 @@ def get_contraries(prolog):
     result = list(prolog.query("contrary(A,B)."))
     contraries = []
     for contrary in result:
-        contraries.append(Atom.parse_atom(contrary['A']), Atom.parse_atom(contrary['B']))
+        contraries.append((Atom.parse_atom(contrary['A']), Atom.parse_atom(contrary['B'])))
     return contraries
 
 

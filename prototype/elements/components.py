@@ -2,6 +2,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
+
+
 @dataclass
 class Atom:
     predicate: str
@@ -10,6 +12,21 @@ class Atom:
     def parse_atom(input: str) -> Atom:
         predicate, arguments_str = input[:-1].split("(",1)
         arguments = arguments_str.split(",")
+        count = 0
+        var_dict = {}
+        for idx, arg in enumerate(arguments):
+            if "$VAR(" in arg:
+                n = int(arg[5:-1])
+                var = chr(ord('A') + n)
+                arguments[idx] = var
+            if arg[0]=="_":
+                if arg in var_dict:
+                    var = var_dict[arg]
+                else:
+                    var = "Z" + chr(ord('A') + count)
+                    var_dict[arg] = var
+                    count += 1
+                arguments[idx] = var
         return Atom(predicate, arguments) 
 
     def __str__(self):
@@ -19,11 +36,11 @@ class Atom:
         args_str = args_str[:-1]
         return self.predicate + "(" + args_str + ")"
 
-    def to_prolog_asm(atom):
-        return f"my_asm({atom})."
+    def to_prolog_asm(self):
+        return f"my_asm({self})."
 
-    def to_prolog_contrary(atom,c_atom):
-        return f"contrary({atom},{c_atom})."
+    def to_prolog_contrary(self,c_atom):
+        return f"contrary({self},{c_atom})."
 
 @dataclass
 class Rule:
@@ -36,7 +53,6 @@ class Rule:
         (rule_id,_,rule_def) = input.partition(":")
         (head_str,_,body_str) = rule_def.partition("<-")
         head = Atom.parse_atom(head_str)
-        print(body_str)
         splits = body_str.split(",")
         body = []
         skip = False
@@ -45,7 +61,12 @@ class Rule:
                 skip = False
                 continue
             if splits[i][0] == '=':
-                body.append(Equality(splits[i][2:], splits[i+1][:-1]))
+                var_1 = splits[i][2:]
+                var_2 = splits[i+1][1:-1]
+                if "$VAR(" in var_1:
+                    n = int(var_1[5:-1])
+                    var_1 = chr(ord('A') + n)
+                body.append(Equality(var_1, var_2))
                 skip = True
             elif '=' in splits[i]:
                 body.append(Equality.parse_equality(splits[i]))
@@ -55,10 +76,17 @@ class Rule:
 
     def to_prolog(self) -> str:
         body_str = ""
+        equalities = []
         for x in self.body:
-            body_str += str(x) + ','
+            if isinstance(x, Atom):
+                body_str += str(x) + ','
+            else:
+                equalities.append(x)
         body_str = body_str[:-1]
         res = f"my_rule({self.rule_id},{self.head},[{body_str}])."
+        for eq in equalities:
+            if eq.var_1 in res:
+                res=res.replace(eq.var_1, eq.var_2)
         return res
 
     def __str__(self):

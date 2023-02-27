@@ -211,7 +211,7 @@ show_rules :-
    \+ my_rule(_,_,_), !, 
    write('no rules').
 show_rules :-
-   show_rule(N,H,B),
+   show_rule(_,_,_),
    fail.
 show_rules.
 
@@ -328,23 +328,3 @@ select_sublist([X|Xs],Ys,[X|Zs]) :-
    select_sublist(Xs,Ys,Zs).
 
 
-man :-
-   nl, write('Available transformation rules:'), nl,
-   write('- rote_learn(RuleId): learn positive example RuleId;'), nl,
-   write('- rote_learn_all(P/A): learn all positive examples for predicate P of arity A;'), nl, 
-   write('- removeq(RuleId,P): remove from rule RuleId the equality at position P;'), nl,
-   write('- geneqs(RuleId): in rule RuleId generalise equalities (X=t, Y=t) to X=Y;'), nl,
-   write('- fold(RuleId1,RuleId2): fold rule RuleId1 using rule RuleId2;'), nl,
-   write('- rem_rule(RuleId): remove rule RuleId;'), nl,
-   write('- add_rule(H,B): add rule H <- B, where A is an atom and B is a list of atoms;'), nl,
-   write('- undercut(RuleId,AtomPos): introduce an assumption atom in the body of rule RuleId whose variables are those of the atoms at position AtomPos, and introduce a corresponding contrary to the assumption;'), nl,
-   write('- add_pos(A): add positive example A;'), nl,
-   write('- add_neg(A): add negative example A;'), nl,
-   write('- rem_pos(ExId): remove positive example ExId;'), nl,
-   write('- rem_neg(ExId): remove negative example ExId;'), nl,
-   write('- show_rules: print current set of rules;'), nl,
-   write('- show_rule(RuleId): print rule RuleId;'), nl,
-   write('- show_ex: print current set of examples;'), nl,
-   write('- restart: restart system.').
-
-:- man.

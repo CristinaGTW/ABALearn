@@ -15,20 +15,34 @@ class ABAFramework:
         f.close()
     
     def get_content(self):
-        content = ""
+        content = "% Background Knowledge \n"
         for rule in self.background_knowledge:
             content += rule.to_prolog() + '\n'
         
+        content += "\n% Positive Examples \n"
         for pos_ex in self.positive_examples:
             content += pos_ex.to_prolog_pos() + '\n'
         
+        content += "\n% Negative Examples \n"        
         for neg_ex in self.negative_examples:
             content += neg_ex.to_prolog_neg() + '\n'
+
         
+        content += "\n% Assumptions \n"        
+        # if len(self.assumptions) == 0:
+        #     content += "% my_asm(_) placeholder \n"
+        #     content += "my_asm(fake_asm(X)). \n"
+        # else:
         for assumption in self.assumptions:
-            content += assumption.to_prolog() + '\n'
+            content += assumption.to_prolog_asm() + '\n'
         
+        
+        content += "\n% Contraries \n"   
+        # if len(self.assumptions) == 0:
+        #     content += "% contrary(_,_) placeholder \n"
+        #     content += "contrary(fake_alpha(X),fake_c_alpha(X)). \n"     
+        # else:
         for contrary in self.contraries:
-            content += contrary.to_prolog() + '\n'
+            content += contrary[0].to_prolog_contrary(contrary[1]) + '\n'
         
         return content
