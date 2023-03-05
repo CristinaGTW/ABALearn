@@ -105,4 +105,6 @@ def get_current_aba_framework(prolog):
     neg_exs = get_negative_examples(prolog)
     assumptions = get_assumptions(prolog)
     contraries = get_contraries(prolog)
-    return ABAFramework(rules, pos_exs, neg_exs, assumptions, contraries)
+    aba_framework = ABAFramework(rules, pos_exs, neg_exs, assumptions, contraries)
+    aba_framework.set_language()
+    return aba_framework

@@ -104,6 +104,9 @@ class Example:
     def get_predicate(self):
         return self.fact.predicate
 
+    def get_arguments(self):
+        return self.fact.arguments
+
     def get_arity(self):
         return len(self.fact.arguments)
 

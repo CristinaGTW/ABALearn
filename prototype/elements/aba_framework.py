@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from elements.components import Rule, Example, Atom, Equality
 @dataclass
 class ABAFramework:
@@ -7,6 +7,7 @@ class ABAFramework:
     negative_examples: list[Example]
     assumptions: list[Atom]
     contraries:list[tuple[Atom, Atom]]
+    language: set[str] = field(default_factory=set)
 
     def create_file(self,filename):
         f = open(filename,"w")
@@ -48,6 +49,10 @@ class ABAFramework:
         return content
 
     def get_language_size(self):
+        return len(self.language)
+
+
+    def set_language(self):
         variables = []
         for rule in self.background_knowledge:
             for arg in rule.head.arguments:
@@ -65,4 +70,4 @@ class ABAFramework:
             for arg in examples.fact.arguments:
                 if arg.islower():
                     variables.append(arg)
-        return len(set(variables))
+        language = set(variables)
