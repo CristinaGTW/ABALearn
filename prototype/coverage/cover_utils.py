@@ -21,7 +21,7 @@ def get_covered_solutions(prolog, atom):
 def get_sol(solutions, variables):
     result = []
     for sol in solutions:
-        result.append(list(sol.values()))
+        result.append(tuple(sol.values()))
     return result
 
 

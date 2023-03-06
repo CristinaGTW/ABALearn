@@ -3,29 +3,19 @@ from transformations.learn_utils import get_rules, add_pos_ex, add_neg_ex, rem_p
 from elements.aba_framework import ABAFramework
 from elements.components import Atom, Equality
 import sys
-import os
 
 
 # If all positive examples in the given framework are covered, return True
 # Otherwise, return False.
-def complete(aba_framework, pos_ex):
-    aba_framework.create_file("check.pl")
-    ret = covered("check.pl", pos_ex)
-    os.remove("check.pl")
-    return ret
+def complete(prolog, pos_ex):
+    return covered(prolog, pos_ex)
 
 # If all negative examples in the given framework are NOT covered, return True
 # Otherwise, return False.
-def consistent(aba_framework, neg_ex):
-    aba_framework.create_file("check.pl")
-    for ex in neg_ex:
-        if covered("check.pl", [ex]):
-            os.remove("check.pl")
-            return False
-    os.remove("check.pl")
-    return True
+def consistent(prolog, neg_ex):
+    return not any([covered(prolog, [ex]) for ex in neg_ex])
 
-def get_solutions(rule, aba_framework):
+def get_solutions(prolog, rule):
     if all([arg.islower() for arg in rule.head.arguments]):
         return [tuple(replace_args)]
     replace_args = []
@@ -35,8 +25,23 @@ def get_solutions(rule, aba_framework):
     if all([arg.islower() for arg in replace_args]) and len(replace_args) > 0:
         return [tuple(replace_args)]
 
-    sols = get_covered_solutions(aba_framework, rule.head)
+    sols = get_covered_solutions(prolog, rule.head)
     return sols
+
+def find_top_rule(prolog, aba_framework, ex):
+    i = 0
+    length = len(aba_framework.background_knowledge)
+    while i < length:
+        rule = aba_framework.background_knowledge[i]
+        aba_framework.background_knowledge.remove(rule)
+        if not covered(prolog,[ex]):
+            aba_framework.background_knowledge.insert(i, rule)
+            return rule
+            
+        aba_framework.background_knowledge.insert(i, rule)
+        i += 1
+    raise TopRuleNotFoundException()
+
 
 def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
     i = 0
@@ -44,11 +49,11 @@ def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
     while i < length:
         rule = aba_framework.background_knowledge[i]
         if not rule in new_rules:
-            sols = get_solutions(rule, aba_framework)
+            sols = get_solutions(prolog, rule)
             aba_framework.background_knowledge.remove(rule)
             i -= 1
             length -= 1
-            sols_without_rule = get_covered_solutions(aba_framework, rule.head)
+            sols_without_rule = get_covered_solutions(prolog, rule.head)
             if set(sols).issubset(set(sols_without_rule)) and len(sols) > 0:
                 print(f"Removing rule {rule} as it is subsumed by some other rule")
                 rem_rule(prolog, rule.rule_id)
@@ -156,7 +161,7 @@ def abalearn(prolog):
     count = 0
     initial_pos_ex = aba_framework.positive_examples
     initial_neg_ex = aba_framework.negative_examples
-    while not(complete(aba_framework, initial_pos_ex) and consistent(aba_framework, initial_neg_ex)):
+    while not(complete(prolog, initial_pos_ex) and consistent(prolog, initial_neg_ex)):
         # Select target p for current iteration
         target = select_target(aba_framework.positive_examples)
         
@@ -189,11 +194,6 @@ def abalearn(prolog):
 
         aba_framework.create_file(f"progress{count}.pl")    
         count += 1
-
-
-
-
-
 
 
 if __name__=="__main__":
