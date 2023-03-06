@@ -1,7 +1,11 @@
-from coverage.cover_utils import covered, get_covered_solutions
-from transformations.learn_utils import get_rules, add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, undercut, set_up_abalearn, rote_learn_all, fold, get_current_aba_framework, rem_rule
+from prolog.coverage import covered, get_covered_solutions
+from prolog.transformation_rules import rote_learn_all, undercut, fold
+from prolog.settings import add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, rem_rule
+from prolog.info import get_rules, get_current_aba_framework
+from prolog.config import set_up_abalearn
 from elements.aba_framework import ABAFramework
 from elements.components import Atom, Equality
+from exceptions.abalearn import TopRuleNotFoundException
 import sys
 
 
@@ -40,7 +44,7 @@ def find_top_rule(prolog, aba_framework, ex):
             
         aba_framework.background_knowledge.insert(i, rule)
         i += 1
-    raise TopRuleNotFoundException()
+    raise TopRuleNotFoundException(f"Could not find top rule for covered example {ex}")
 
 
 def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
@@ -64,7 +68,8 @@ def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
         i += 1
     return get_current_aba_framework(prolog)
 
-def get_constants(aba_framework, target):
+def get_constants(prolog, aba_framework, target):
+    top_rule = find_top_rule(prolog, aba_framework, target)
     pos_ex_consts = []
     neg_ex_consts = []
 

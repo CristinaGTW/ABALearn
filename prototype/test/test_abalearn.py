@@ -1,4 +1,6 @@
-from transformations.learn_utils import set_up_abalearn, add_rule, get_rules, get_positive_examples
+from prolog.settings import add_rule
+from prolog.config import set_up_abalearn
+from prolog.info import get_rules, get_positive_examples
 from elements.components import Rule, Atom, Example
 
 def test_get_rules():

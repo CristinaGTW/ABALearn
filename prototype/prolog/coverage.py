@@ -1,6 +1,3 @@
-from subprocess import Popen, PIPE
-import os
-
 
 def covered(prolog, exs):
     exs_str = ""
@@ -23,5 +20,3 @@ def get_sol(solutions, variables):
     for sol in solutions:
         result.append(tuple(sol.values()))
     return result
-
-

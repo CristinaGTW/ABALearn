@@ -1,0 +1,2 @@
+class TopRuleNotFoundException(Exception):
+    pass
