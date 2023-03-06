@@ -33,6 +33,7 @@ def get_solutions(prolog, rule):
     return sols
 
 def find_top_rule(prolog, aba_framework, ex):
+    breakpoint()
     i = 0
     length = len(aba_framework.background_knowledge)
     while i < length:
@@ -68,10 +69,11 @@ def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
         i += 1
     return get_current_aba_framework(prolog)
 
-def get_constants(prolog, aba_framework, target):
-    top_rule = find_top_rule(prolog, aba_framework, target)
-    pos_ex_consts = []
-    neg_ex_consts = []
+def get_constants(prolog, aba_framework, ex, top_rule, idxs):
+    for atom in top_rule.body:
+        if isinstance(atom, Atom):
+            sols = get_covered_solutions(prolog, atom)
+    breakpoint()
 
     for pos_ex in aba_framework.positive_examples:
         if pos_ex.get_predicate() == target:
@@ -160,6 +162,20 @@ def add_examples(prolog, predicate, pos_consts, neg_consts) -> ABAFramework:
         add_neg_ex(prolog, ex)
     return get_current_aba_framework(prolog)
 
+def find_covered_ex(prolog, aba_framework, target):
+    breakpoint()
+    cov_pos_ex = []
+    cov_neg_ex = []
+    for ex in aba_framework.positive_examples:
+        if ex.get_predicate() == target.get_predicate() and covered(prolog, [ex]):
+            cov_pos_ex.append(ex)
+    
+    for ex in aba_framework.negative_examples:
+        if ex.get_predicate() == target.get_predicate() and covered(prolog, [ex]):
+            cov_neg_ex.append(ex)
+
+    return (cov_pos_ex, cov_neg_ex)
+
 
 def abalearn(prolog):
     aba_framework = get_current_aba_framework(prolog)
@@ -179,13 +195,19 @@ def abalearn(prolog):
         ## Generalise via subsumption
         aba_framework = remove_subsumed(prolog, aba_framework, new_rules)
 
-        # Learn exceptions
-        for rule in new_rules:
+        # Find examples of the target predicate that are covered (both positive and negative)
+        (cov_pos_ex, cov_neg_ex) = find_covered_ex(prolog, aba_framework, target)
+
+        neg_top_rules = [(ex,find_top_rule(prolog, aba_framework, ex)) for ex in cov_neg_ex]
+
+        # Learn exceptions for each top rule of an argument for covered negative examples
+        for (cov_ex, rule) in neg_top_rules:
             if rule.head.predicate == target.get_predicate():    
                 # Choose which variables to consider
-                idxs = list(range(1,len(rule.head.arguments)+1)) # Currently takes in consideration all the arguments present in the head of the rule
+                idxs = [1] # Currently takes in consideration first atom in the body of the rule
+                
                 # Construct the two sets of constants consts(A+) and consts(A-)
-                (a_plus, a_minus) = get_constants(aba_framework, target.get_predicate())
+                (a_plus, a_minus) = get_constants(prolog, aba_framework, cov_ex, rule, idxs)
                 
                 # Perform assumption introduction via undercutting
                 aba_framework = assumption_introduction(prolog,rule,idxs) 
