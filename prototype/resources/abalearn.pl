@@ -75,36 +75,8 @@ geneqs(R) :-
    gensym(r_,R1),
    replace(my_rule(R,H,B),my_rule(R1,H,B1)).
 
-/* Tests
 
-my_rule(r_20,p(X,Y,Z),[X=a,Y=b,Z=a]).
-
-?- geneqs(r_20).
-
-learnt rule:
-r_1: p(A,B,C) <- A=C, B=b
-true .
-
-
-*/
-
-%%%%% FOLDING (simplfied version: no added eqs.) %%%%%%
-
-/*
-fold(R1,R2) :-                    
-   my_rule(R1,H1,B1),
-   my_rule(R2,H2,B2),
-   subsumes_chk_conj(B2,B1,Subconj,Rest),
-   B2=Subconj,
-   append([H2],Rest,NewB),
-   gensym(r,R3),
-   replace(my_rule(R1,H1,B1),my_rule(R3,H1,NewB)),
-   nl, write('learnt rule:'), show_rule(R3), nl. 
-*/
-   
-% Folding with added equalities
-% It's a bit more restrictive than the one on paper (see fold(r11,r12))
-
+%%%%% FOLDING %%%%%%
 fold(R1,R2) :-
    R1\=R2,                    
    my_rule(R1,H,Bd1),
@@ -133,37 +105,8 @@ hdequalities_acc(VK,[A|As],AccEqs,Eqs,AccR,R) :-
 hdequalities_acc(VK,[A|As],AccEqs,Eqs,AccR,R) :-
    hdequalities_acc(VK,As,AccEqs,Eqs,[A|AccR],R).
 
-/* Tests
-
-my_rule(r9,p(X,Y),[X=a,Y=b,s(X)]).
-my_rule(r10,p(X,Y),[X=a,r(Y),s(X)]).
-my_rule(r11,h,[Y=Z,p(Z)]).
-my_rule(r12,k,[X=Y,Z=a]).
-my_rule(r13,k(Z),[X=Y,Z=a]).
-my_rule(r14,k(Z),[X=Z,Z=a]).
-
-?- fold(r10,r9).
-
-learnt rule:
-r_3: p(A,B) <- C=b, p(A,C), r(B)
-true .
-
-?- fold(r11,r12).
-false.
-
-?- fold(r11,r13).
-
-learnt rule:
-r_4: h <- A=a, k(A), p(B)
-true .
-
-?- fold(r11,r14).
-false.
-
-*/
 
 %%%% SUBSUMPTION %%%%%%
-% To be automated: Based on unfolding?
 
 rem_rule(R) :-
    retract(my_rule(R,_H,_B)).
@@ -197,7 +140,6 @@ atoms([N|Ns],B,[A|As]) :-
 
 
 % Add/Remove examples
-% To be automated
 
 add_pos(A) :- gensym(p_,N), assert(pos(N,A)).
 add_neg(A) :- gensym(n_,N), assert(neg(N,A)).
@@ -205,60 +147,10 @@ rem_pos(N) :- retract(pos(N,_A)).
 rem_neg(N) :- retract(neg(N,_A)).
 
 
-% show current rules in the database
-
-show_rules :-
-   \+ my_rule(_,_,_), !, 
-   write('no rules').
-show_rules :-
-   show_rule(_,_,_),
-   fail.
-show_rules.
-
-
-% show rule with identifier N 
-
-show_rule(N,H,B) :-
-   my_rule(N,H,B),
-   numbervars((H,B)),
-   nl, write(N), write(': '), write(H), write(' <- '), write_conj(B).
-
+% get current rules in the database by querying get_rules(N,H,B).
 get_rules(N,H,B) :-
    my_rule(N,H,B),
    numbervars((H,B)).
-
-
-% output a conjunction of atoms
-
-write_conj([]) :- write(true).
-write_conj([A]) :- write(A).
-write_conj([H1,H2|T]) :- write(H1), write(', '), write_conj([H2|T]).
-
-
-% show examples
-
-show_ex :-
-   \+ pos(_,_),
-   \+ neg(_,_),
-   write('no examples').
-show_ex :-
-   show_pos,
-   fail.
-show_ex :-
-   nl,
-   show_neg,
-   fail.
-show_ex.
-
-show_pos :-
-   pos(N,A),
-   numbervars(A),
-   nl, write(N), write(': '), write(pos(A)).
-
-show_neg :-
-   neg(N,A),
-   numbervars(A),
-   nl, write(N), write(': '), write(neg(A)).
 
 
 % MODE: subsumes_chk_conj(+T1,+T2, -T3,-T4)

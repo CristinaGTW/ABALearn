@@ -39,7 +39,7 @@ def test_rule_to_str():
 
 def test_rule_to_prolog():
     rule = Rule("r_1", Atom("bird", ["X"]), [Atom("penguin", ["X"])])
-    prolog_rule = rule.to_prolog()
+    prolog_rule = rule.to_prolog(True)
     assert prolog_rule == "my_rule(r_1,bird(X),[penguin(X)])."
 
 
@@ -64,3 +64,14 @@ def test_example_to_prolog_neg():
     example = Example("e_3", Atom("flies", ["c"]))
     prolog_neg_ex = example.to_prolog_neg()
     assert prolog_neg_ex == "neg(e_3,flies(c))."
+
+### EQUALITIES TESTS
+def test_equal_equalities():
+    eq_1 = Equality("X","a")
+    eq_2 = Equality("X","a")
+    assert eq_1 == eq_2
+
+def test_unequal_equalities():
+    eq_1 = Equality("X","b")
+    eq_2 = Equality("X","a")
+    assert not eq_1 == eq_2

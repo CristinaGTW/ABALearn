@@ -1,10 +1,10 @@
 from prolog.coverage import covered, get_covered_solutions
 from prolog.transformation_rules import rote_learn_all, undercut, fold
-from prolog.settings import add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, rem_rule
+from prolog.settings import add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, rem_rule, adjust_for_coverage, restore_prolog
 from prolog.info import get_rules, get_current_aba_framework
 from prolog.config import set_up_abalearn
 from elements.aba_framework import ABAFramework
-from elements.components import Atom, Equality
+from elements.components import Atom, Equality, Example, Rule
 from exceptions.abalearn import TopRuleNotFoundException
 import sys
 
@@ -21,7 +21,7 @@ def consistent(prolog, neg_ex):
 
 def get_solutions(prolog, rule):
     if all([arg.islower() for arg in rule.head.arguments]):
-        return [tuple(replace_args)]
+        return [tuple(rule.head.arguments)]
     replace_args = []
     for eq in rule.body:
         if isinstance(eq, Equality):
@@ -33,7 +33,6 @@ def get_solutions(prolog, rule):
     return sols
 
 def find_top_rule(prolog, aba_framework, ex):
-    breakpoint()
     i = 0
     length = len(aba_framework.background_knowledge)
     while i < length:
@@ -51,29 +50,30 @@ def find_top_rule(prolog, aba_framework, ex):
 def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
     i = 0
     length = len(aba_framework.background_knowledge)
+    modified_rules = adjust_for_coverage(prolog, aba_framework)
     while i < length:
         rule = aba_framework.background_knowledge[i]
         if not rule in new_rules:
             sols = get_solutions(prolog, rule)
-            aba_framework.background_knowledge.remove(rule)
+            rem_rule(prolog, rule.rule_id)
             i -= 1
             length -= 1
             sols_without_rule = get_covered_solutions(prolog, rule.head)
             if set(sols).issubset(set(sols_without_rule)) and len(sols) > 0:
+                aba_framework.background_knowledge.remove(rule)
                 print(f"Removing rule {rule} as it is subsumed by some other rule")
-                rem_rule(prolog, rule.rule_id)
             else:
                 i += 1
                 length += 1
-                aba_framework.background_knowledge.insert(i, rule)
+                list(prolog.query(f"assert({rule.to_prolog(False)[:-1]})."))
         i += 1
+    restore_prolog(prolog, aba_framework, modified_rules)
     return get_current_aba_framework(prolog)
 
 def get_constants(prolog, aba_framework, ex, top_rule, idxs):
     for atom in top_rule.body:
         if isinstance(atom, Atom):
             sols = get_covered_solutions(prolog, atom)
-    breakpoint()
 
     for pos_ex in aba_framework.positive_examples:
         if pos_ex.get_predicate() == target:
@@ -86,10 +86,10 @@ def get_constants(prolog, aba_framework, ex, top_rule, idxs):
 
 
 # Selects as target the examples whose predicate has most occurrences
-def select_target(exs):
-    counter_dict = {}
+def select_target(exs:list[Example]) -> Example:
+    counter_dict:dict[str,int] = {}
     max_count = -1
-    most_common_pred = ""
+    most_common_pred:Example = exs[0]
     for ex in exs:
         counter_dict[ex.get_predicate()] = counter_dict.get(ex.get_predicate(), 0) + 1
         if counter_dict[ex.get_predicate()] > max_count:
@@ -97,16 +97,33 @@ def select_target(exs):
             most_common_pred = ex
     return most_common_pred
     
-def generate_rules(prolog,ex) -> ABAFramework:
+def generate_rules(prolog, ex:Example) -> ABAFramework:
     print(f"Applying \"Rote Learning\" to build rules for the predicate {ex.get_predicate()}.")
     rote_learn_all(prolog,ex.get_predicate(), ex.get_arity())
     return get_current_aba_framework(prolog)
 
-# TODO: Change
-def foldable(rule_1, rule_2):
-    return rule_1.body == rule_2.body
+# rule_1 is considered foldable wrt rule_2
+# if the equalities in rule_1 are a subset of the equalities in rule_2
+# if the atoms in rule_2 are a subset of the atoms in rule_1
+def foldable(rule_1:Rule, rule_2:Rule) -> bool:
+    equalities_1:list[Equality] = rule_1.get_equalities()
+    equalities_2:list[Equality] = rule_2.get_equalities()
+    atoms_1:list[Atom] = rule_1.get_atoms()
+    atoms_2:list[Atom] = rule_2.get_atoms()
 
-def keep_unique_rules(rules):
+    if len(equalities_2)>0 and len(equalities_1)==0:
+        return False
+    if len(atoms_1)>0 and len(atoms_2)==0:
+        return False
+    for eq_1 in equalities_1:
+        if eq_1 not in equalities_2:
+            return False
+    for a_2 in atoms_2:
+        if a_2 not in atoms_1:
+            return False
+    return True
+
+def keep_unique_rules(prolog,rules):
     length = len(rules)
     i = 0
     while i < length-1:
@@ -114,6 +131,7 @@ def keep_unique_rules(rules):
         while j < length:
             if rules[i].head == rules[j].head and rules[i].body == rules[j].body:
                 rules.remove(rules[i])
+                rem_rule(prolog, rules[i].rule_id)
                 i -= 1
                 j -= 1
                 length -= 1
@@ -122,8 +140,7 @@ def keep_unique_rules(rules):
         i += 1    
     return rules
 
-# TODO: Change
-def fold_rule(prolog,rules) -> ABAFramework:
+def fold_rules(prolog,rules) -> ABAFramework:
     new_rules = []
     for i in range(len(rules)-1):
         for j in range(i+1,len(rules)):
@@ -132,7 +149,9 @@ def fold_rule(prolog,rules) -> ABAFramework:
                 fold(prolog, rules[j].rule_id, rules[i].rule_id)
                 aba_framework = get_current_aba_framework(prolog)
                 new_rules += [aba_framework.background_knowledge[-1]]
-    return (aba_framework, keep_unique_rules(new_rules))
+    new_rules = keep_unique_rules(prolog,new_rules)
+    aba_framework = get_current_aba_framework(prolog)
+    return (aba_framework, new_rules)
 
 def assumption_introduction(prolog,rule,atom_pos) -> ABAFramework:
     print(f"Performing assumption introduction on rule {rule.rule_id}")
@@ -152,18 +171,15 @@ def remove_all_examples(prolog, aba_framework, predicate) -> ABAFramework:
 def add_examples(prolog, predicate, pos_consts, neg_consts) -> ABAFramework:
     print(f"Adding as positive examples:")
     for consts in neg_consts:
-        ex = Atom(predicate,consts)
-        print(ex)
+        ex:Atom = Atom(predicate,consts)
         add_pos_ex(prolog, ex)
     print(f"Adding as negative examples:")
     for consts in pos_consts:
-        ex = Atom(predicate,consts)
-        print(ex)
+        ex:Atom = Atom(predicate,consts)
         add_neg_ex(prolog, ex)
     return get_current_aba_framework(prolog)
 
 def find_covered_ex(prolog, aba_framework, target):
-    breakpoint()
     cov_pos_ex = []
     cov_neg_ex = []
     for ex in aba_framework.positive_examples:
@@ -177,27 +193,32 @@ def find_covered_ex(prolog, aba_framework, target):
     return (cov_pos_ex, cov_neg_ex)
 
 
-def abalearn(prolog):
-    aba_framework = get_current_aba_framework(prolog)
+def abalearn(prolog) -> None:
+    aba_framework: ABAFramework = get_current_aba_framework(prolog)
     count = 0
-    initial_pos_ex = aba_framework.positive_examples
-    initial_neg_ex = aba_framework.negative_examples
+    initial_pos_ex:list[Example] = aba_framework.positive_examples
+    initial_neg_ex:list[Example] = aba_framework.negative_examples
     while not(complete(prolog, initial_pos_ex) and consistent(prolog, initial_neg_ex)):
         # Select target p for current iteration
-        target = select_target(aba_framework.positive_examples)
+        target:Example = select_target(aba_framework.positive_examples)
         
         # Generate rules for p via Rote Learning
         aba_framework = generate_rules(prolog, target)
 
         # Generalise via folding
-        (aba_framework, new_rules) = fold_rule(prolog,aba_framework.background_knowledge)
+        (aba_framework, new_rules) = fold_rules(prolog,aba_framework.background_knowledge)
 
         ## Generalise via subsumption
         aba_framework = remove_subsumed(prolog, aba_framework, new_rules)
 
-        # Find examples of the target predicate that are covered (both positive and negative)
-        (cov_pos_ex, cov_neg_ex) = find_covered_ex(prolog, aba_framework, target)
 
+        # Find examples of the target predicate that are covered (both positive and negative)
+        modified_rules = adjust_for_coverage(prolog, aba_framework)
+        (cov_pos_ex, cov_neg_ex) = find_covered_ex(prolog, aba_framework, target)
+        restore_prolog(prolog, aba_framework, modified_rules)
+
+        breakpoint()
+        
         neg_top_rules = [(ex,find_top_rule(prolog, aba_framework, ex)) for ex in cov_neg_ex]
 
         # Learn exceptions for each top rule of an argument for covered negative examples

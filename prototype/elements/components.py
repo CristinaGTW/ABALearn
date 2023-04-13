@@ -36,10 +36,10 @@ class Atom:
         args_str = args_str[:-1]
         return self.predicate + "(" + args_str + ")"
 
-    def to_prolog_asm(self):
+    def to_prolog_asm(self) -> str:
         return f"my_asm({self})."
 
-    def to_prolog_contrary(self,c_atom):
+    def to_prolog_contrary(self,c_atom) -> str:
         return f"contrary({self},{c_atom})."
 
 @dataclass
@@ -74,20 +74,68 @@ class Rule:
                 body.append(Atom.parse_atom(splits[i]))
         return Rule(rule_id, head, body)
 
-    def to_prolog(self) -> str:
+    def get_equalities(self) -> list[Equality]:
+        eqs:list[Equality] = []
+        for b in self.body:
+            if isinstance(b, Equality):
+                eqs.append(b)
+        return eqs
+
+    def get_atoms(self) -> list[Atom]:
+        atoms:list[Atom] = []
+        for b in self.body:
+            if isinstance(b, Atom):
+                atoms.append(b)
+        return atoms
+
+    def to_prolog(self, with_eq:bool) -> str:
+        res = ""
+        if with_eq:
+            body_str=""
+            for x in self.body:
+                body_str += str(x) + ","
+            body_str = body_str[:-1]
+            res = f"my_rule({self.rule_id},{self.head},[{body_str}])."
+        else:
+            res = self.substitute_eqs()[0]
+        return res
+    
+    def substitute_eqs(self) -> tuple[str,bool]:
         body_str = ""
         equalities = []
+        modified = False
         for x in self.body:
-            if isinstance(x, Atom):
-                body_str += str(x) + ','
-            else:
+            if isinstance(x, Equality):
                 equalities.append(x)
+        for x in self.body:
+            if isinstance(x, Atom):        
+                args_str = ""
+                for a in x.arguments:
+                    for eq in equalities:
+                        if eq.var_1 == a:
+                            modified = True
+                            args_str += eq.var_2 + ","
+                        else:
+                            args_str += a + ","
+                args_str = args_str[:-1]
+                x.predicate + "(" + args_str + ")"
+                body_str += str(x) + ','
         body_str = body_str[:-1]
-        res = f"my_rule({self.rule_id},{self.head},[{body_str}])."
-        for eq in equalities:
-            if eq.var_1 in res:
-                res=res.replace(eq.var_1, eq.var_2)
-        return res
+        head_str = self.head.predicate + "("
+        for a in self.head.arguments:
+            substituted = False
+            for eq in equalities:
+                if eq.var_1 == a:
+                    modified = True
+                    substituted = True 
+                    head_str += eq.var_2 + ","
+                    break
+            if not substituted:
+                head_str += a + ","
+        head_str = head_str[:-1]
+        head_str += ")"    
+        res = f"my_rule({self.rule_id},{head_str},[{body_str}])."
+        return (res, modified)       
 
     def __str__(self):
         body_str = ""
@@ -101,13 +149,13 @@ class Example:
     example_id: str
     fact: Atom
 
-    def get_predicate(self):
+    def get_predicate(self) -> str:
         return self.fact.predicate
 
-    def get_arguments(self):
+    def get_arguments(self) -> list[str]:
         return self.fact.arguments
 
-    def get_arity(self):
+    def get_arity(self) -> int:
         return len(self.fact.arguments)
 
     def parse_example(input: str) -> Example:
@@ -115,10 +163,10 @@ class Example:
         fact = Atom.parse_atom(example_def)
         return Example(example_id, fact)
 
-    def to_prolog_pos(self):
+    def to_prolog_pos(self) -> str:
         return f"pos({self.example_id},{self.fact})."
     
-    def to_prolog_neg(self):
+    def to_prolog_neg(self) -> str:
         return f"neg({self.example_id},{self.fact})."
 
     def __str__(self):

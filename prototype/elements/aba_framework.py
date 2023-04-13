@@ -9,16 +9,16 @@ class ABAFramework:
     contraries:list[tuple[Atom, Atom]]
     language: set[str] = field(default_factory=set)
 
-    def create_file(self,filename):
+    def create_file(self,filename:str, with_eq:bool):
         f = open(filename,"w")
-        content = self.get_content()
+        content = self.get_content(with_eq)
         f.write(content)
         f.close()
     
-    def get_content(self):
+    def get_content(self, with_eq:bool) -> str:
         content = "% Background Knowledge \n"
         for rule in self.background_knowledge:
-            content += rule.to_prolog() + '\n'
+            content += rule.to_prolog(with_eq) + '\n'
         
         content += "\n% Positive Examples \n"
         for pos_ex in self.positive_examples:

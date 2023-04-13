@@ -3,6 +3,7 @@
 :- use_module(library(lists)).
 :- use_module(library(ordsets)).
 
+:- dynamic my_asm/1, contrary/2.
 
 covered([]).
 covered([Ex|RestEx]):- 
@@ -25,6 +26,10 @@ argument((Conc,Asm)) :-
 
 % the empty	set of literals is always justified (derivable) by the empty set
 justified([],[]).
+
+justified([X=X|RestBody], Asm) :-
+	justified(RestBody,Asm).
+
 % a literal Body1 is justified (derivable) by a set Asm where (Body1,Asm) is
 % an argument
 justified([Body1|RestBody],Asm) :-
