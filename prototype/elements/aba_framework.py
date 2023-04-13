@@ -9,9 +9,9 @@ class ABAFramework:
     contraries:list[tuple[Atom, Atom]]
     language: set[str] = field(default_factory=set)
 
-    def create_file(self,filename:str, with_eq:bool):
+    def create_file(self,filename:str):
         f = open(filename,"w")
-        content = self.get_content(with_eq)
+        content = self.get_content()
         f.write(content)
         f.close()
     

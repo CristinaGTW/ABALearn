@@ -88,54 +88,14 @@ class Rule:
                 atoms.append(b)
         return atoms
 
-    def to_prolog(self, with_eq:bool) -> str:
-        res = ""
-        if with_eq:
-            body_str=""
-            for x in self.body:
-                body_str += str(x) + ","
-            body_str = body_str[:-1]
-            res = f"my_rule({self.rule_id},{self.head},[{body_str}])."
-        else:
-            res = self.substitute_eqs()[0]
-        return res
-    
-    def substitute_eqs(self) -> tuple[str,bool]:
-        body_str = ""
-        equalities = []
-        modified = False
+    def to_prolog(self) -> str:
+        body_str=""
         for x in self.body:
-            if isinstance(x, Equality):
-                equalities.append(x)
-        for x in self.body:
-            if isinstance(x, Atom):        
-                args_str = ""
-                for a in x.arguments:
-                    for eq in equalities:
-                        if eq.var_1 == a:
-                            modified = True
-                            args_str += eq.var_2 + ","
-                        else:
-                            args_str += a + ","
-                args_str = args_str[:-1]
-                x.predicate + "(" + args_str + ")"
-                body_str += str(x) + ','
+            body_str += str(x) + ","
         body_str = body_str[:-1]
-        head_str = self.head.predicate + "("
-        for a in self.head.arguments:
-            substituted = False
-            for eq in equalities:
-                if eq.var_1 == a:
-                    modified = True
-                    substituted = True 
-                    head_str += eq.var_2 + ","
-                    break
-            if not substituted:
-                head_str += a + ","
-        head_str = head_str[:-1]
-        head_str += ")"    
-        res = f"my_rule({self.rule_id},{head_str},[{body_str}])."
-        return (res, modified)       
+        res = f"my_rule({self.rule_id},{self.head},[{body_str}])."
+        return res
+     
 
     def __str__(self):
         body_str = ""

@@ -32,22 +32,3 @@ def rem_neg_ex(prolog, ex_id:str) -> None:
 def rem_rule(prolog, rule_id:str) -> None:
     query = f"rem_rule({rule_id})."
     list(prolog.query(query))  
-
-
-def adjust_for_coverage(prolog, aba_framework) -> list[str]:
-    modified_rules:list[str] = []
-    for rule in aba_framework.background_knowledge:
-        (parsed_rule, modified) = rule.substitute_eqs()  
-        if modified:
-            modified_rules.append(rule.rule_id)
-            rem_rule(prolog, rule.rule_id)
-            list(prolog.query(f"assert({parsed_rule[:-1]}).")) 
-    return modified_rules
-
-def restore_prolog(prolog, aba_framework, modified_rules) -> None:
-    for rule_id in modified_rules:
-        rem_rule(prolog, rule_id)
-    
-    for rule in aba_framework.background_knowledge:
-        if rule.rule_id in modified_rules:
-            list(prolog.query(f"assert({rule.to_prolog(True)[:-1]})."))

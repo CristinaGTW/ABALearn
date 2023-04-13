@@ -1,6 +1,6 @@
 from prolog.coverage import covered, get_covered_solutions
 from prolog.transformation_rules import rote_learn_all, undercut, fold
-from prolog.settings import add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, rem_rule, adjust_for_coverage, restore_prolog
+from prolog.settings import add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, rem_rule
 from prolog.info import get_rules, get_current_aba_framework
 from prolog.config import set_up_abalearn
 from elements.aba_framework import ABAFramework
@@ -50,7 +50,6 @@ def find_top_rule(prolog, aba_framework, ex):
 def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
     i = 0
     length = len(aba_framework.background_knowledge)
-    modified_rules = adjust_for_coverage(prolog, aba_framework)
     while i < length:
         rule = aba_framework.background_knowledge[i]
         if not rule in new_rules:
@@ -65,9 +64,8 @@ def remove_subsumed(prolog, aba_framework, new_rules) -> ABAFramework:
             else:
                 i += 1
                 length += 1
-                list(prolog.query(f"assert({rule.to_prolog(False)[:-1]})."))
+                list(prolog.query(f"assert({rule.to_prolog()[:-1]})."))
         i += 1
-    restore_prolog(prolog, aba_framework, modified_rules)
     return get_current_aba_framework(prolog)
 
 def get_constants(prolog, aba_framework, ex, top_rule, idxs):
@@ -213,12 +211,12 @@ def abalearn(prolog) -> None:
 
 
         # Find examples of the target predicate that are covered (both positive and negative)
-        modified_rules = adjust_for_coverage(prolog, aba_framework)
+
         (cov_pos_ex, cov_neg_ex) = find_covered_ex(prolog, aba_framework, target)
-        restore_prolog(prolog, aba_framework, modified_rules)
+
 
         breakpoint()
-        
+
         neg_top_rules = [(ex,find_top_rule(prolog, aba_framework, ex)) for ex in cov_neg_ex]
 
         # Learn exceptions for each top rule of an argument for covered negative examples
