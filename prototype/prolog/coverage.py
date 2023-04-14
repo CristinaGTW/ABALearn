@@ -11,11 +11,8 @@ def covered(prolog, exs:list[Example]) -> bool:
     return result == [{}]
 
 # Finds all values sol for which atom.predicate(sol) is covered
-def get_covered_solutions(prolog, atom:Atom) -> list[tuple[str,...]]:
+def get_covered_solutions(prolog, atom:Atom) -> list[dict]:
     query:str = f"covered([{atom}])."
     solutions:list[dict] = list(prolog.query(query))
-    result:list[tuple[str,...]] = []
-    for sol in solutions:
-        result.append(tuple(sol.values()))
-    return result
+    return solutions
     

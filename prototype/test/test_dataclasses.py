@@ -39,7 +39,7 @@ def test_rule_to_str():
 
 def test_rule_to_prolog():
     rule = Rule("r_1", Atom("bird", ["X"]), [Atom("penguin", ["X"])])
-    prolog_rule = rule.to_prolog(True)
+    prolog_rule = rule.to_prolog()
     assert prolog_rule == "my_rule(r_1,bird(X),[penguin(X)])."
 
 

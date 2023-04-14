@@ -22,4 +22,4 @@ def test_get_covered_solutions():
 
     result = get_covered_solutions(prolog, Atom("flies",["X"]))
 
-    assert set(result) == set([("e",),("f",),("a",),("b",)])
+    assert result == [{"X":"e"},{"X":"f"},{"X":"a"},{"X":"b"}]

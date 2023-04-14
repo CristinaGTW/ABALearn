@@ -104,6 +104,10 @@ class Rule:
 
         return self.rule_id + ":" + str(self.head) + "<-" + body_str[:-1]
 
+    def __hash__(self):
+        return hash(self.rule_id)
+
+
 @dataclass
 class Example:
     example_id: str
@@ -131,6 +135,10 @@ class Example:
 
     def __str__(self):
         return self.example_id + ":" + str(self.fact)
+
+
+    def __hash__(self):
+        return hash(self.example_id)
 
 @dataclass
 class Equality:
