@@ -21,13 +21,11 @@ def add_neg_ex(prolog, ex_atom:Atom) -> None:
 
 def rem_pos_ex(prolog, ex_id:str) -> None:
     query = f"rem_pos({ex_id})."
-    list(prolog.query(query))   
-    print(f"Removed positive example {ex_id}")
+    list(prolog.query(query))  
 
 def rem_neg_ex(prolog, ex_id:str) -> None:
     query = f"rem_neg({ex_id})."
     list(prolog.query(query))   
-    print(f"Removed negative example {ex_id}")
 
 def rem_rule(prolog, rule_id:str) -> None:
     query = f"rem_rule({rule_id})."

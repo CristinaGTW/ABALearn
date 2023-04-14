@@ -16,7 +16,7 @@ class Atom:
         var_dict = {}
         for idx, arg in enumerate(arguments):
             if "$VAR(" in arg:
-                n = int(arg[5:-1])
+                n = int(arg[arg.find("$")+5:-1])
                 var = chr(ord('A') + n)
                 arguments[idx] = var
             if arg[0]=="_":

@@ -8,7 +8,7 @@ def covered(prolog, exs:list[Example]) -> bool:
     exs_str = exs_str[:-1]
     query = f"covered([{exs_str}])."    
     result:list[dict] = list(prolog.query(query))
-    return result == [{}]
+    return all([res=={} for res in result]) and len(result)>0
 
 # Finds all values sol for which atom.predicate(sol) is covered
 def get_covered_solutions(prolog, atom:Atom) -> list[dict]:
