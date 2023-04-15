@@ -7,8 +7,8 @@ restart :-
    retractall(my_rule(_,_,_)),
    retractall(pos(_,_)),
    retractall(neg(_,_)),
-   retractall(contrary(_,_)).
-
+   retractall(contrary(_,_)),
+   retractall(my_asm(_)).
 
 /*
 Rules are represented by facts of the form my_rule(RuleId,H,B)
