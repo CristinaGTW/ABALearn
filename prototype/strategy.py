@@ -103,8 +103,8 @@ def find_justified_grounding(
     prolog,
     curr_groundings: dict,
     body: list[Atom | Equality],
-    body_copy: list[Atom | Equality]
-) -> list[Atom]|None:
+    body_copy: list[Atom | Equality],
+) -> list[Atom] | None:
     for i, b in enumerate(body):
         if isinstance(b, Atom):
             needs_check = False
@@ -117,12 +117,9 @@ def find_justified_grounding(
                 sols = get_covered_solutions(prolog, body_copy[i])
                 for sol in sols:
                     for var in sol:
-                        curr_groundings[var] = sols[var]
+                        curr_groundings[var] = sol[var]
                     return find_justified_grounding(
-                        prolog,
-                        curr_groundings,
-                        body_copy[i:],
-                        deepcopy(body_copy)[i:]
+                        prolog, curr_groundings, body_copy[i:], deepcopy(body_copy)[i:]
                     )
         if isinstance(b, Equality):
             if b.var_1 in sol.keys():
@@ -163,16 +160,20 @@ def get_constants(
     neg_ex_sols: list[dict] = []
 
     for sol in head_sol:
-        if list(sol.values()) in [ex.get_arguments() for ex in cov_pos_ex] and sol not in pos_ex_sols:
+        if (
+            list(sol.values()) in [ex.get_arguments() for ex in cov_pos_ex]
+            and sol not in pos_ex_sols
+        ):
             pos_ex_sols.append(sol)
-        if list(sol.values()) in [ex.get_arguments() for ex in cov_neg_ex] and sol not in neg_ex_sols:
+        if (
+            list(sol.values()) in [ex.get_arguments() for ex in cov_neg_ex]
+            and sol not in neg_ex_sols
+        ):
             neg_ex_sols.append(sol)
 
     for sol in pos_ex_sols:
         body_copy: list[Atom | Equality] = deepcopy(top_rule.body)
-        grounded_body = find_justified_grounding(
-            prolog, sol, top_rule.body, body_copy
-        )
+        grounded_body = find_justified_grounding(prolog, sol, top_rule.body, body_copy)
         if grounded_body is not None:
             curr_sol = []
             for i in idxs:
@@ -181,9 +182,7 @@ def get_constants(
             pos_ex_consts.append(curr_sol)
     for sol in neg_ex_sols:
         body_copy: list[Atom | Equality] = deepcopy(top_rule.body)
-        grounded_body = find_justified_grounding(
-            prolog, sol, top_rule.body, body_copy
-        )
+        grounded_body = find_justified_grounding(prolog, sol, top_rule.body, body_copy)
         if grounded_body is not None:
             curr_sol = []
             for i in idxs:
@@ -260,10 +259,8 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
     for i in range(len(rules)):
         for j in range(len(rules)):
             if (
-                (rules[i].head != rules[j].head
-                or rules[i].body != rules[j].body)
-                and rules[i].head.predicate == predicate
-            ):
+                rules[i].head != rules[j].head or rules[i].body != rules[j].body
+            ) and rules[i].head.predicate == predicate:
                 if foldable(rules[i], rules[j]):
                     print(f"Folding rule {rules[i]} with rule {rules[j]}")
                     fold(prolog, rules[i].rule_id, rules[j].rule_id)
@@ -272,7 +269,10 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
                     while len(new_rule.get_equalities()) > 0:
                         for i, b in enumerate(new_rule.body):
                             if isinstance(b, Equality):
-                                remove_eq(prolog, new_rule, i + 1)
+                                print(
+                                    f"Removing equality at position {i+1} from rule {new_rule}"
+                                )
+                                remove_eq(prolog, new_rule.rule_id, i + 1)
                         aba_framework = get_current_aba_framework(prolog)
                         new_rule = aba_framework.background_knowledge[-1]
                     new_rules += [new_rule]
@@ -376,7 +376,7 @@ def abalearn(prolog) -> ABAFramework:
 
                 # Add negative and positive examples for the contraries introduced
                 (_, c_a) = aba_framework.contraries[-1]
-                
+
                 aba_framework = add_examples(prolog, c_a.predicate, a_plus, a_minus)
 
         # Remove examples about target

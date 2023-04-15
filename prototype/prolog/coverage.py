@@ -21,8 +21,8 @@ def get_covered_solutions(prolog, atom: Atom) -> list[dict]:
             sol[k] = str(sol[k])
     i = 0
     size = len(solutions)
-    while i<size:
-        temp_sols = solutions[0:i] + solutions[i+1:]
+    while i < size:
+        temp_sols = solutions[0:i] + solutions[i + 1 :]
         if i in temp_sols:
             solutions = temp_sols
             size -= 1

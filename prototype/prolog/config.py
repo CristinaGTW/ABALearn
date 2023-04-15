@@ -8,6 +8,7 @@ def set_up_abalearn(input_file_path: str) -> Prolog:
     prolog.consult(input_file_path)
     return prolog
 
+
 def reset(prolog: Prolog) -> None:
     list(prolog.query("restart."))
     return prolog
