@@ -2,32 +2,30 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 
-
-
 @dataclass
 class Atom:
     predicate: str
     arguments: list[str]
 
     def parse_atom(input: str) -> Atom:
-        predicate, arguments_str = input[:-1].split("(",1)
+        predicate, arguments_str = input[:-1].split("(", 1)
         arguments = arguments_str.split(",")
         count = 0
         var_dict = {}
         for idx, arg in enumerate(arguments):
             if "$VAR(" in arg:
-                n = int(arg[arg.find("$")+5:-1])
-                var = chr(ord('A') + n)
+                n = int(arg[arg.find("$") + 5 : -1])
+                var = chr(ord("A") + n)
                 arguments[idx] = var
-            if arg[0]=="_":
+            if arg[0] == "_":
                 if arg in var_dict:
                     var = var_dict[arg]
                 else:
-                    var = "Z" + chr(ord('A') + count)
+                    var = "Z" + chr(ord("A") + count)
                     var_dict[arg] = var
                     count += 1
                 arguments[idx] = var
-        return Atom(predicate, arguments) 
+        return Atom(predicate, arguments)
 
     def __str__(self):
         args_str = ""
@@ -39,63 +37,78 @@ class Atom:
     def to_prolog_asm(self) -> str:
         return f"my_asm({self})."
 
-    def to_prolog_contrary(self,c_atom) -> str:
+    def to_prolog_contrary(self, c_atom) -> str:
         return f"contrary({self},{c_atom})."
+
 
 @dataclass
 class Rule:
     rule_id: str
     head: Atom
-    body: list[Atom|Equality]
+    body: list[Atom | Equality]
 
-    
+    def _split_body(body: str) -> list[str]:
+        result = []
+
+        start = 0
+        level = 0
+        for i in range(len(body)):
+            if body[i] == "," and level == 0:
+                result.append(body[start:i])
+                start = i + 1
+            elif body[i] == "(":
+                level += 1
+            elif body[i] == ")":
+                level -= 1
+
+        result.append(body[start:])
+        return result
+
     def parse_rule(input: str) -> Rule:
-        (rule_id,_,rule_def) = input.partition(":")
-        (head_str,_,body_str) = rule_def.partition("<-")
+        (rule_id, _, rule_def) = input.partition(":")
+        (head_str, _, body_str) = rule_def.partition("<-")
         head = Atom.parse_atom(head_str)
-        splits = body_str.split(",")
+        splits = Rule._split_body(body_str)
         body = []
-        skip = False
-        for i in range(len(splits)):
-            if skip:
-                skip = False
-                continue
-            if splits[i][0] == '=':
-                var_1 = splits[i][2:]
-                var_2 = splits[i+1][1:-1]
+        for b in splits:
+            if b[0] == "=":
+                vars = b[2:-1].split(",")
+                var_1 = vars[0].strip()
+                var_2 = vars[1].strip()
                 if "$VAR(" in var_1:
                     n = int(var_1[5:-1])
-                    var_1 = chr(ord('A') + n)
+                    var_1 = chr(ord("A") + n)
+                if "$VAR(" in var_2:
+                    n = int(var_2[5:-1])
+                    var_2 = chr(ord("A") + n)
                 body.append(Equality(var_1, var_2))
-                skip = True
-            elif '=' in splits[i]:
-                body.append(Equality.parse_equality(splits[i]))
+            elif "=" in b:
+                body.append(Equality.parse_equality(b))
             else:
-                body.append(Atom.parse_atom(splits[i]))
+                body.append(Atom.parse_atom(b))
         return Rule(rule_id, head, body)
 
     def get_equalities(self) -> list[Equality]:
-        eqs:list[Equality] = []
+        eqs: list[Equality] = []
         for b in self.body:
             if isinstance(b, Equality):
                 eqs.append(b)
         return eqs
 
     def get_atoms(self) -> list[Atom]:
-        atoms:list[Atom] = []
+        atoms: list[Atom] = []
         for b in self.body:
             if isinstance(b, Atom):
                 atoms.append(b)
         return atoms
 
     def to_prolog(self) -> str:
-        body_str=""
+        body_str = ""
         for x in self.body:
             body_str += str(x) + ","
         body_str = body_str[:-1]
         res = f"my_rule({self.rule_id},{self.head},[{body_str}])."
         return res
-     
 
     def __str__(self):
         body_str = ""
@@ -123,30 +136,30 @@ class Example:
         return len(self.fact.arguments)
 
     def parse_example(input: str) -> Example:
-        example_id,_,example_def = input.partition(":")
+        example_id, _, example_def = input.partition(":")
         fact = Atom.parse_atom(example_def)
         return Example(example_id, fact)
 
     def to_prolog_pos(self) -> str:
         return f"pos({self.example_id},{self.fact})."
-    
+
     def to_prolog_neg(self) -> str:
         return f"neg({self.example_id},{self.fact})."
 
     def __str__(self):
         return self.example_id + ":" + str(self.fact)
 
-
     def __hash__(self):
         return hash(self.example_id)
+
 
 @dataclass
 class Equality:
     var_1: str
     var_2: str
 
-    def parse_equality(input:str) -> Equality:
-        var_1,_,var_2 = input.partition("=")
+    def parse_equality(input: str) -> Equality:
+        var_1, _, var_2 = input.partition("=")
         return Equality(var_1, var_2)
 
     def __str__(self):

@@ -246,15 +246,28 @@ def keep_unique_rules(prolog, rules):
     return rules
 
 
-def fold_rules(prolog, rules) -> ABAFramework:
+def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
     new_rules = []
-    for i in range(len(rules) - 1):
-        for j in range(i + 1, len(rules)):
-            if foldable(rules[i], rules[j]):
-                print(f"Folding rule {rules[j]} with rule {rules[i]}")
-                fold(prolog, rules[j].rule_id, rules[i].rule_id)
-                aba_framework = get_current_aba_framework(prolog)
-                new_rules += [aba_framework.background_knowledge[-1]]
+    for i in range(len(rules)):
+        for j in range(len(rules)):
+            if (
+                (rules[i].head != rules[j].head
+                or rules[i].body != rules[j].body)
+                and rules[i].head.predicate == predicate
+            ):
+                if foldable(rules[i], rules[j]):
+                    print(f"Folding rule {rules[i]} with rule {rules[j]}")
+                    fold(prolog, rules[i].rule_id, rules[j].rule_id)
+                    aba_framework = get_current_aba_framework(prolog)
+                    new_rule = aba_framework.background_knowledge[-1]
+                    while len(new_rule.get_equalities()) > 0:
+                        for i, b in enumerate(new_rule.body):
+                            if isinstance(b, Equality):
+                                remove_eq(prolog, new_rule, i + 1)
+                        aba_framework = get_current_aba_framework(prolog)
+                        new_rule = aba_framework.background_knowledge[-1]
+                    new_rules += [new_rule]
+                    
     new_rules = keep_unique_rules(prolog, new_rules)
     aba_framework = get_current_aba_framework(prolog)
 
@@ -316,7 +329,7 @@ def abalearn(prolog) -> None:
 
         # Generalise via folding
         (aba_framework, new_rules) = fold_rules(
-            prolog, aba_framework.background_knowledge
+            prolog, aba_framework.background_knowledge, target.get_predicate()
         )
 
         ## Generalise via subsumption
