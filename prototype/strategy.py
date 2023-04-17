@@ -99,12 +99,13 @@ def remove_subsumed(
     return get_current_aba_framework(prolog)
 
 
-def find_justified_grounding(
+def find_justified_groundings(
     prolog,
     curr_groundings: dict,
     body: list[Atom | Equality],
     body_copy: list[Atom | Equality],
-) -> list[Atom] | None:
+    result: list[list[Atom]],
+) -> list[list[Atom]]:
     for i, b in enumerate(body):
         if isinstance(b, Atom):
             needs_check = False
@@ -115,11 +116,16 @@ def find_justified_grounding(
                     needs_check = True
             if needs_check:
                 sols = get_covered_solutions(prolog, body_copy[i])
+
                 for sol in sols:
                     for var in sol:
                         curr_groundings[var] = sol[var]
-                    return find_justified_grounding(
-                        prolog, curr_groundings, body_copy[i:], deepcopy(body_copy)[i:]
+                    result += find_justified_groundings(
+                        prolog,
+                        curr_groundings,
+                        body_copy[i:],
+                        deepcopy(body_copy)[i:],
+                        result,
                     )
         if isinstance(b, Equality):
             if b.var_1 in sol.keys():
@@ -142,8 +148,8 @@ def find_justified_grounding(
     for b in body_copy:
         if isinstance(b, Atom):
             if not covered(prolog, [Example("fake_ex", b)]):
-                return None
-    return body_copy
+                return result
+    return result + [body_copy]
 
 
 def get_constants(
@@ -173,22 +179,28 @@ def get_constants(
 
     for sol in pos_ex_sols:
         body_copy: list[Atom | Equality] = deepcopy(top_rule.body)
-        grounded_body = find_justified_grounding(prolog, sol, top_rule.body, body_copy)
-        if grounded_body is not None:
+        grounded_bodies = find_justified_groundings(
+            prolog, sol, top_rule.body, body_copy, []
+        )
+        for grounded_body in grounded_bodies:
             curr_sol = []
             for i in idxs:
                 for a in grounded_body[i].arguments:
                     curr_sol.append(a)
-            pos_ex_consts.append(curr_sol)
+            if curr_sol not in pos_ex_consts:
+                pos_ex_consts.append(curr_sol)
     for sol in neg_ex_sols:
         body_copy: list[Atom | Equality] = deepcopy(top_rule.body)
-        grounded_body = find_justified_grounding(prolog, sol, top_rule.body, body_copy)
-        if grounded_body is not None:
+        grounded_bodies = find_justified_groundings(
+            prolog, sol, top_rule.body, body_copy, []
+        )
+        for grounded_body in grounded_bodies:
             curr_sol = []
             for i in idxs:
                 for a in grounded_body[i].arguments:
                     curr_sol.append(a)
-            neg_ex_consts.append(curr_sol)
+            if curr_sol not in neg_ex_consts:
+                neg_ex_consts.append(curr_sol)
 
     return (pos_ex_consts, neg_ex_consts)
 
@@ -329,7 +341,6 @@ def abalearn(prolog) -> ABAFramework:
     initial_pos_ex: list[Example] = aba_framework.positive_examples
     initial_neg_ex: list[Example] = aba_framework.negative_examples
     while not (complete(prolog, initial_pos_ex) and consistent(prolog, initial_neg_ex)):
-        print("Starting iteration")
         # Select target p for current iteration
         target: Example = select_target(aba_framework.positive_examples)
 
@@ -345,7 +356,6 @@ def abalearn(prolog) -> ABAFramework:
         aba_framework = remove_subsumed(prolog, aba_framework, new_rules)
 
         # Find examples of the target predicate that are covered (both positive and negative)
-
         (cov_pos_ex, cov_neg_ex) = find_covered_ex(prolog, aba_framework, target)
         neg_top_rules = []
         for ex in cov_neg_ex:
