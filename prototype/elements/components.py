@@ -25,6 +25,7 @@ class Atom:
                     var_dict[arg] = var
                     count += 1
                 arguments[idx] = var
+        arguments = [arg.strip() for arg in arguments]
         return Atom(predicate, arguments)
 
     def __str__(self):
@@ -134,11 +135,6 @@ class Example:
 
     def get_arity(self) -> int:
         return len(self.fact.arguments)
-
-    def parse_example(input: str) -> Example:
-        example_id, _, example_def = input.partition(":")
-        fact = Atom.parse_atom(example_def)
-        return Example(example_id, fact)
 
     def to_prolog_pos(self) -> str:
         return f"pos({self.example_id},{self.fact})."

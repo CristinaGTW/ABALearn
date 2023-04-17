@@ -54,13 +54,6 @@ def test_rule_to_prolog():
 
 ##### EXAMPLE TESTS
 
-
-def test_parse_example():
-    example = Example.parse_example("e_1:flies(a)")
-    assert example.example_id == "e_1"
-    assert example.fact == Atom("flies", ["a"])
-
-
 def test_example_to_str():
     example = Example("e_1", Atom("flies", ["a"]))
     example_str = str(example)
