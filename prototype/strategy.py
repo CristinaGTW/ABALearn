@@ -1,5 +1,5 @@
 from prolog.coverage import covered, get_covered_solutions
-from prolog.transformation_rules import rote_learn_all, undercut, fold, remove_eq
+from prolog.transformation_rules import rote_learn_all, undercut, fold, remove_eq, foldable
 from prolog.settings import add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, rem_rule
 from prolog.info import get_rules, get_current_aba_framework
 from prolog.config import set_up_abalearn
@@ -226,26 +226,6 @@ def generate_rules(prolog, ex: Example) -> ABAFramework:
     return get_current_aba_framework(prolog)
 
 
-# rule_1 is considered foldable wrt rule_2
-# if the equalities in rule_1 are a subset of the equalities in rule_2
-# if the atoms in rule_2 are a subset of the atoms in rule_1
-def foldable(rule_1: Rule, rule_2: Rule) -> bool:
-    equalities_1: list[Equality] = rule_1.get_equalities()
-    equalities_2: list[Equality] = rule_2.get_equalities()
-    atoms_1: list[Atom] = rule_1.get_atoms()
-    atoms_2: list[Atom] = rule_2.get_atoms()
-
-    if len(equalities_2) > 0 and len(equalities_1) == 0:
-        return False
-    if len(atoms_1) > 0 and len(atoms_2) == 0:
-        return False
-    for eq_1 in equalities_1:
-        if eq_1 not in equalities_2:
-            return False
-    for a_2 in atoms_2:
-        if a_2 not in atoms_1:
-            return False
-    return True
 
 
 def keep_unique_rules(prolog, rules):
@@ -270,10 +250,8 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
     new_rules = []
     for i in range(len(rules)):
         for j in range(len(rules)):
-            if (
-                rules[i].head != rules[j].head or rules[i].body != rules[j].body
-            ) and rules[i].head.predicate == predicate:
-                if foldable(rules[i], rules[j]):
+            if rules[i].head.predicate == predicate:
+                if foldable(prolog,rules[i].rule_id, rules[j].rule_id):
                     print(f"Folding rule {rules[i]} with rule {rules[j]}")
                     fold(prolog, rules[i].rule_id, rules[j].rule_id)
                     aba_framework = get_current_aba_framework(prolog)

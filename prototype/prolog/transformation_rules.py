@@ -17,6 +17,10 @@ def fold(prolog, rule_id_1, rule_id_2):
     query = f"fold({rule_id_1},{rule_id_2})."
     list(prolog.query(query))
 
+def foldable(prolog, rule_id_1, rule_id_2) -> bool:
+    query = f"foldable({rule_id_1},{rule_id_2})."
+    result = list(prolog.query(query))
+    return result==[{}]
 
 def undercut(prolog, rule_id, atom_pos):
     query = f"undercut({rule_id},{atom_pos})."

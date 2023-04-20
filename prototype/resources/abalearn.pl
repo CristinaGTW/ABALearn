@@ -92,6 +92,20 @@ fold(R1,R2) :-
    gensym(r_,R3),
    replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)).
 
+%%%%% CHECKS IF RULES ARE FOLDABLE
+foldable(R1,R2) :-
+   R1\=R2,                
+   my_rule(R1,H,Bd1),
+   my_rule(R2,K,Bd2),
+   H\=K,    
+   term_variables(K,VK),
+   hdequalities(VK,Bd2,Eqs2,Eqs1B1),
+   select_sublist(Eqs2,SEqs2,_),
+   append(SEqs2,Eqs1B1,SBd2),
+   subsumes_chk_conj(SBd2,Bd1,Subconj,_),
+   SBd2=Subconj,
+   Subconj\=[].
+
 hdequalities(VK,Bd2,Eqs2,Eqs1B1) :- hdequalities_acc(VK,Bd2,[],Eqs2,[],Eqs1B1).
    
 hdequalities_acc(_VK,[],Eqs,Eqs,R,R).
