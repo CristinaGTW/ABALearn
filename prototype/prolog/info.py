@@ -49,14 +49,25 @@ def get_assumptions(prolog) -> list[Atom]:
     return asms
 
 
+def get_con_body_map(prolog) -> dict[str, list[str]]:
+    result: list[dict] = list(prolog.query("con_body(C,B)."))
+    con_bodies: dict[Atom, list[Atom]] = {}
+    for con_body in result:
+        con_bodies[Atom.parse_atom(con_body["C"]).predicate] = [
+            Atom.parse_atom(str(b)).predicate for b in con_body["B"]
+        ]
+    return con_bodies
+
+
 def get_current_aba_framework(prolog) -> ABAFramework:
     rules: list[Rule] = get_rules(prolog)
     pos_exs: list[Example] = get_positive_examples(prolog)
     neg_exs: list[Example] = get_negative_examples(prolog)
     assumptions: list[Atom] = get_assumptions(prolog)
     contraries: list[tuple[Atom, Atom]] = get_contraries(prolog)
+    con_body_map: dict[str, list[str]] = get_con_body_map(prolog)
     aba_framework: ABAFramework = ABAFramework(
-        rules, pos_exs, neg_exs, assumptions, contraries
+        rules, pos_exs, neg_exs, assumptions, contraries, con_body_map
     )
-    aba_framework.set_language()
+
     return aba_framework

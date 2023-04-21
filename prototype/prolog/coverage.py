@@ -28,3 +28,16 @@ def get_covered_solutions(prolog, atom: Atom) -> list[dict]:
             size -= 1
         i += 1
     return solutions
+
+
+def count_covered(prolog, aba_framework) -> tuple[int, int]:
+    pos_count = 0
+    for pos_ex in aba_framework.positive_examples:
+        if covered(prolog, [pos_ex]):
+            pos_count += 1
+    neg_count = 0
+    for neg_ex in aba_framework.negative_examples:
+        if covered(prolog, [neg_ex]):
+            neg_count += 1
+
+    return (pos_count, neg_count)

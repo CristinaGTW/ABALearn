@@ -1,6 +1,19 @@
-from prolog.coverage import covered, get_covered_solutions
-from prolog.transformation_rules import rote_learn_all, undercut, fold, remove_eq, foldable
-from prolog.settings import add_pos_ex, add_neg_ex, rem_pos_ex, rem_neg_ex, rem_rule
+from prolog.coverage import covered, get_covered_solutions, count_covered
+from prolog.transformation_rules import (
+    rote_learn_all,
+    undercut,
+    fold,
+    remove_eq,
+    foldable,
+)
+from prolog.settings import (
+    add_pos_ex,
+    add_neg_ex,
+    rem_pos_ex,
+    rem_neg_ex,
+    rem_rule,
+    restore_framework,
+)
 from prolog.info import get_rules, get_current_aba_framework
 from prolog.config import set_up_abalearn
 from elements.aba_framework import ABAFramework
@@ -226,8 +239,6 @@ def generate_rules(prolog, ex: Example) -> ABAFramework:
     return get_current_aba_framework(prolog)
 
 
-
-
 def keep_unique_rules(prolog, rules):
     length = len(rules)
     i = 0
@@ -246,14 +257,27 @@ def keep_unique_rules(prolog, rules):
     return rules
 
 
+def check_loop(aba_framework: ABAFramework, predicate: str, rule: Rule):
+    for con in aba_framework.con_body_map:
+        if con == predicate and rule.head.predicate in aba_framework.con_body_map[con]:
+            return True
+    return False
+
+
 def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
     new_rules = []
-    for i in range(len(rules)):
-        for j in range(len(rules)):
-            if rules[i].head.predicate == predicate:
-                if foldable(prolog,rules[i].rule_id, rules[j].rule_id):
-                    print(f"Folding rule {rules[i]} with rule {rules[j]}")
-                    fold(prolog, rules[i].rule_id, rules[j].rule_id)
+    aba_framework = get_current_aba_framework(prolog)
+    introduced_neg = False
+    for rule_1 in rules:
+        for rule_2 in rules:
+            if rule_1.head.predicate == predicate:
+                if foldable(prolog, rule_1.rule_id, rule_2.rule_id) and not check_loop(
+                    aba_framework, predicate, rule_2
+                ):
+                    prev_framework = deepcopy(aba_framework)
+                    (_, prev_neg) = count_covered(prolog, aba_framework)
+                    print(f"Folding rule {rule_1} with rule {rule_2}")
+                    fold(prolog, rule_1.rule_id, rule_2.rule_id)
                     aba_framework = get_current_aba_framework(prolog)
                     new_rule = aba_framework.background_knowledge[-1]
                     while len(new_rule.get_equalities()) > 0:
@@ -265,6 +289,16 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
                                 remove_eq(prolog, new_rule.rule_id, i + 1)
                         aba_framework = get_current_aba_framework(prolog)
                         new_rule = aba_framework.background_knowledge[-1]
+                    (_, curr_neg) = count_covered(prolog, aba_framework)
+                    if curr_neg > prev_neg:
+                        if introduced_neg:
+                            print(
+                                "Undoing previous fold as it covered additional negative examples."
+                            )
+                            restore_framework(prolog, prev_framework)
+                            aba_framework = get_current_aba_framework(prolog)
+                        else:
+                            introduced_neg = True
                     new_rules += [new_rule]
 
     new_rules = keep_unique_rules(prolog, new_rules)
@@ -359,13 +393,14 @@ def abalearn(prolog) -> ABAFramework:
                 (a_plus, a_minus) = get_constants(
                     prolog, rule, cov_pos_ex, cov_neg_ex, idxs
                 )
-                # Perform assumption introduction via undercutting
-                aba_framework = assumption_introduction(prolog, rule, idxs)
+                if a_plus != [] or a_minus != []:
+                    # Perform assumption introduction via undercutting
+                    aba_framework = assumption_introduction(prolog, rule, idxs)
 
-                # Add negative and positive examples for the contraries introduced
-                (_, c_a) = aba_framework.contraries[-1]
+                    # Add negative and positive examples for the contraries introduced
+                    (_, c_a) = aba_framework.contraries[-1]
 
-                aba_framework = add_examples(prolog, c_a.predicate, a_plus, a_minus)
+                    aba_framework = add_examples(prolog, c_a.predicate, a_plus, a_minus)
 
         # Remove examples about target
         aba_framework = remove_all_examples(

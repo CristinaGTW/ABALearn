@@ -9,7 +9,7 @@ class ABAFramework:
     negative_examples: list[Example]
     assumptions: list[Atom]
     contraries: list[tuple[Atom, Atom]]
-    language: set[str] = field(default_factory=set)
+    con_body_map: dict[str, list[str]]
 
     def create_file(self, filename: str):
         f = open(filename, "w")
@@ -39,26 +39,3 @@ class ABAFramework:
             content += contrary[0].to_prolog_contrary(contrary[1]) + "\n"
 
         return content
-
-    def get_language_size(self):
-        return len(self.language)
-
-    def set_language(self):
-        variables = []
-        for rule in self.background_knowledge:
-            for arg in rule.head.arguments:
-                if arg[0].islower() or arg[0].isdigit():
-                    variables.append(arg)
-            for x in rule.body:
-                if isinstance(x, Atom):
-                    for arg in x.arguments:
-                        if arg[0].islower() or arg[0].isdigit():
-                            variables.append(arg)
-                else:
-                    assert isinstance(x, Equality)
-                    variables.append(x.var_2)
-        for examples in self.positive_examples + self.negative_examples:
-            for arg in examples.fact.arguments:
-                if arg[0].islower() or arg[0].isdigit():
-                    variables.append(arg)
-        language = set(variables)

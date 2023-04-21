@@ -1,14 +1,15 @@
 :- use_module(library(dialect/hprolog),
     [ memberchk_eq/2 ]).
 
-:- dynamic my_rule/3, pos/2, neg/2, contrary/2, my_asm/1.
+:- dynamic my_rule/3, pos/2, neg/2, contrary/2, my_asm/1, con_body/2.
 restart :- 
    reset_gensym,
    retractall(my_rule(_,_,_)),
    retractall(pos(_,_)),
    retractall(neg(_,_)),
    retractall(contrary(_,_)),
-   retractall(my_asm(_)).
+   retractall(my_asm(_)),
+   retractall(con_body(_,_)).
 
 /*
 Rules are represented by facts of the form my_rule(RuleId,H,B)
@@ -142,6 +143,7 @@ undercut(R,AtomPos) :-
    CAsm=..[CAlpha|Vs],
    assert(my_asm(Asm)),
    assert(contrary(Asm,CAsm)),
+   assert(con_body(CAsm, B)),
    append(B,[Asm],B1),
    gensym(r_,R1),
    replace(my_rule(R,H,B),my_rule(R1,H,B1)).

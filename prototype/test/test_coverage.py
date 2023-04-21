@@ -4,7 +4,7 @@ from prolog.config import set_up_abalearn
 
 
 def test_covers():
-    prolog = set_up_abalearn("prototype/resources/flies_example.pl")
+    prolog = set_up_abalearn("prototype/test_resources/flies_example.pl")
 
     result = covered(
         prolog,
@@ -18,7 +18,7 @@ def test_covers():
 
 
 def test_not_covers():
-    prolog = set_up_abalearn("prototype/resources/flies_example.pl")
+    prolog = set_up_abalearn("prototype/test_resources/flies_example.pl")
 
     result = covered(
         prolog,
@@ -32,7 +32,7 @@ def test_not_covers():
 
 
 def test_get_covered_solutions():
-    prolog = set_up_abalearn("prototype/resources/flies_example.pl")
+    prolog = set_up_abalearn("prototype/test_resources/flies_example.pl")
 
     result = get_covered_solutions(prolog, Atom("bird", ["X"]))
 
