@@ -141,19 +141,19 @@ def find_justified_groundings(
                         result,
                     )
         if isinstance(b, Equality):
-            if b.var_1 in sol.keys():
+            if b.var_1 in curr_groundings.keys():
                 if b.var_2[0].islower() or b.var_2[0].isdigit():
-                    assert sol[b.var_1] == b.var_2
+                    assert curr_groundings[b.var_1] == b.var_2
                 else:
-                    if b.var_2 in sol.keys():
-                        assert sol[b.var_1] == sol[b.var_2]
+                    if b.var_2 in curr_groundings.keys():
+                        assert curr_groundings[b.var_1] == curr_groundings[b.var_2]
                     else:
-                        sol[b.var_2] = sol[b.var_1]
+                        curr_groundings[b.var_2] = curr_groundings[b.var_1]
             else:
                 if b.var_2 in sol.keys():
-                    sol[b.var_1] = sol[b.var_2]
+                    curr_groundings[b.var_1] = curr_groundings[b.var_2]
                 elif b.var_2[0].islower() or b.var_2[0].isdigit():
-                    sol[b.var_1] = b.var_2
+                    curr_groundings[b.var_1] = b.var_2
                 else:
                     raise InvalidRuleBodyException(
                         f"Body {body} isn't constructed correctly."
@@ -264,42 +264,70 @@ def check_loop(aba_framework: ABAFramework, predicate: str, rule: Rule):
     return False
 
 
+def count_new_vars(new_rule: Rule, rule_1: Rule, rule_2: Rule) -> int:
+    new_vars = new_rule.get_vars()
+    vars_1 = rule_1.get_vars()
+    vars_2 = rule_2.get_vars()
+    diff_1 = new_vars.difference(vars_1)
+    diff_2 = new_vars.difference(vars_2)
+    return min(len(diff_1), len(diff_2))
+
+
 def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
     new_rules = []
     aba_framework = get_current_aba_framework(prolog)
     introduced_neg = False
-    for rule_1 in rules:
-        for rule_2 in rules:
-            if rule_1.head.predicate == predicate:
-                if foldable(prolog, rule_1.rule_id, rule_2.rule_id) and not check_loop(
-                    aba_framework, predicate, rule_2
-                ):
-                    prev_framework = deepcopy(aba_framework)
-                    (_, prev_neg) = count_covered(prolog, aba_framework)
-                    print(f"Folding rule {rule_1} with rule {rule_2}")
-                    fold(prolog, rule_1.rule_id, rule_2.rule_id)
-                    aba_framework = get_current_aba_framework(prolog)
-                    new_rule = aba_framework.background_knowledge[-1]
-                    while len(new_rule.get_equalities()) > 0:
-                        for i, b in enumerate(new_rule.body):
-                            if isinstance(b, Equality):
-                                print(
-                                    f"Removing equality at position {i+1} from rule {new_rule}"
-                                )
-                                remove_eq(prolog, new_rule.rule_id, i + 1)
+    new_vars_allowed = 0
+    undone = False
+    while new_rules == []:
+        for rule_1 in rules:
+            for rule_2 in rules:
+                if rule_1.head.predicate == predicate:
+                    undone = False
+                    if foldable(
+                        prolog, rule_1.rule_id, rule_2.rule_id
+                    ) and not check_loop(aba_framework, predicate, rule_2):
+                        prev_framework = deepcopy(aba_framework)
+                        (_, prev_neg) = count_covered(prolog, aba_framework)
+                        print(f"Folding rule {rule_1} with rule {rule_2}")
+                        fold(prolog, rule_1.rule_id, rule_2.rule_id)
                         aba_framework = get_current_aba_framework(prolog)
                         new_rule = aba_framework.background_knowledge[-1]
-                    (_, curr_neg) = count_covered(prolog, aba_framework)
-                    if curr_neg > prev_neg:
-                        if introduced_neg:
+                        while len(new_rule.get_equalities()) > 0:
+                            for i, b in enumerate(new_rule.body):
+                                if isinstance(b, Equality) and (
+                                    b.var_2[0].islower() or b.var_2[0].isdigit()
+                                ):
+                                    print(
+                                        f"Removing equality at position {i+1} from rule {new_rule}"
+                                    )
+                                    remove_eq(prolog, new_rule.rule_id, i + 1)
+                            aba_framework = get_current_aba_framework(prolog)
+                            new_rule = aba_framework.background_knowledge[-1]
+                        (_, curr_neg) = count_covered(prolog, aba_framework)
+                        if curr_neg > prev_neg:
+                            if introduced_neg:
+                                print(
+                                    "Undoing previous fold as it covered additional negative examples."
+                                )
+                                restore_framework(prolog, prev_framework)
+                                aba_framework = get_current_aba_framework(prolog)
+                                undone = True
+                            else:
+                                introduced_neg = True
+                        if (
+                            count_new_vars(new_rule, rule_1, rule_2) > new_vars_allowed
+                            and not undone
+                        ):
                             print(
-                                "Undoing previous fold as it covered additional negative examples."
+                                "Undoing previous fold as it introduced too many new variables."
                             )
                             restore_framework(prolog, prev_framework)
                             aba_framework = get_current_aba_framework(prolog)
-                        else:
-                            introduced_neg = True
-                    new_rules += [new_rule]
+                            undone = True
+                        if not undone:
+                            new_rules += [new_rule]
+        new_vars_allowed += 1
 
     new_rules = keep_unique_rules(prolog, new_rules)
     aba_framework = get_current_aba_framework(prolog)

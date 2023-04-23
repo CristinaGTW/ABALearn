@@ -103,6 +103,24 @@ class Rule:
                 atoms.append(b)
         return atoms
 
+    def get_vars(self) -> set[str]:
+        vars: list[str] = []
+        for x in self.head.arguments:
+            if x[0].isupper():
+                vars.append(x)
+        for b in self.body:
+            if isinstance(b, Atom):
+                for x in b.arguments:
+                    if x[0].isupper():
+                        vars.append(x)
+            else:
+                assert isinstance(b, Equality)
+                if b.var_1[0].isupper():
+                    vars.append(b.var_1)
+                if b.var_2[0].isupper():
+                    vars.append(b.var_2)
+        return set(vars)
+
     def to_prolog(self) -> str:
         body_str = ""
         for x in self.body:

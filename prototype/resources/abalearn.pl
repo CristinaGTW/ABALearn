@@ -94,7 +94,7 @@ fold(R1,R2) :-
    replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)).
 
 %%%%% CHECKS IF RULES ARE FOLDABLE
-foldable(R1,R2) :-
+foldable(R1,R2,Subconj) :-
    R1\=R2,                
    my_rule(R1,H,Bd1),
    my_rule(R2,K,Bd2),

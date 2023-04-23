@@ -33,16 +33,26 @@ def test_prolog_can_be_modified():
     rules = get_rules(prolog)
     assert len(rules) == 9
 
+
 def test_foldable():
     prolog = set_up_abalearn("")
     list(prolog.query("assertz(my_rule(r1,free(A,B),[A=4,B=6]))."))
     list(prolog.query("assertz(my_rule(r2,busy(A),[A=6]))."))
-    assert foldable(prolog,"r1","r2")
-    assert foldable(prolog,"r2","r1")
+    assert foldable(prolog, "r1", "r2")
+    assert foldable(prolog, "r2", "r1")
+
 
 def test_not_foldable():
     prolog = set_up_abalearn("")
-    list(prolog.query("assertz(my_rule(r1,busy(A),[A=4]))."))
-    list(prolog.query("assertz(my_rule(r2,busy(A),[A=6]))."))
-    assert not foldable(prolog,"r1","r2")
-    assert not foldable(prolog,"r2","r1")
+    list(prolog.query("assertz(my_rule(r3,busy(A),[A=5]))."))
+    list(prolog.query("assertz(my_rule(r4,busy(A),[A=7]))."))
+    assert not foldable(prolog, "r3", "r4")
+    assert not foldable(prolog, "r4", "r3")
+
+
+def test_foldable_2():
+    prolog = set_up_abalearn("")
+    list(prolog.query("assertz(my_rule(r5,path(A,B),[A=1,B=3]))."))
+    list(prolog.query("assertz(my_rule(r6,arc(A,B),[A=1,B=3]))."))
+    assert foldable(prolog, "r5", "r6")
+    assert foldable(prolog, "r6", "r5")
