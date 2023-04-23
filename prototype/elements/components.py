@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from copy import deepcopy
 
 
 @dataclass
@@ -88,6 +89,45 @@ class Rule:
             else:
                 body.append(Atom.parse_atom(b))
         return Rule(rule_id, head, body)
+
+    def has_constants(self):
+        for b in self.body:
+            if isinstance(b,Atom):
+                if any([not arg[0].isupper() for arg in b.arguments]):
+                    return True
+        return False
+
+
+    def extract_eqs(self):
+        new_rule = deepcopy(self)
+
+        body_str = ""
+        all_vars = []
+        for a in self.head.arguments:
+            if a[0].isupper():
+                all_vars.append(a)
+        for b in self.body:
+            if isinstance(b,Atom):
+                for a in b.arguments:
+                    if a[0].isupper():
+                        all_vars.append(a)
+            if isinstance(b,Equality):
+                if b.var_1[0].isupper():
+                    all_vars.append(b.var_1)
+                if b.var_2[0].isupper():
+                    all_vars.append(b.var_2)
+        all_vars.sort()
+
+        for i,x in enumerate(self.body):
+            if isinstance(x,Atom):
+                for idx,arg in enumerate(x.arguments):
+                    if arg[0].islower() or arg[0].isdigit():
+                        next_chr = chr(ord(all_vars[-1]) + 1)
+                        all_vars.append(next_chr)
+                        new_rule.body.append(Equality(next_chr,arg))
+                        new_rule.body[i].arguments[idx]=next_chr
+        return new_rule
+
 
     def get_equalities(self) -> list[Equality]:
         eqs: list[Equality] = []

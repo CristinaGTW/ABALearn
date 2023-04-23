@@ -14,6 +14,7 @@ from prolog.settings import (
     rem_neg_ex,
     rem_rule,
     restore_framework,
+    unfold_and_replace,
 )
 from prolog.info import get_rules, get_current_aba_framework
 from prolog.config import set_up_abalearn
@@ -100,7 +101,7 @@ def remove_subsumed(
     prolog, aba_framework: ABAFramework, new_rules: list[Rule]
 ) -> ABAFramework:
     for rule in aba_framework.background_knowledge:
-        if not rule in new_rules:
+        if not rule in new_rules:  # and rule.head.predicate != target:
             sols = get_solutions(prolog, rule)
             rem_rule(prolog, rule.rule_id)
             sols_without_rule = get_covered_solutions(prolog, rule.head)
@@ -298,6 +299,9 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
                         fold(prolog, rule_1.rule_id, rule_2.rule_id)
                         aba_framework = get_current_aba_framework(prolog)
                         new_rule = aba_framework.background_knowledge[-1]
+                        if new_rule.has_constants():
+                            new_rule = unfold_and_replace(prolog, new_rule)
+
                         while len(new_rule.get_equalities()) > 0:
                             for i, b in enumerate(new_rule.body):
                                 if isinstance(b, Equality) and (
@@ -381,20 +385,67 @@ def find_covered_ex(prolog, aba_framework, target):
     return (cov_pos_ex, cov_neg_ex)
 
 
+def remove_eqs(prolog, rules: list[Rule], new_rules):
+    rem_eq_rules = []
+    for r in rules:
+        if len(r.get_equalities()) == len(r.body):
+            if any(
+                [
+                    eq.var_1[0].isupper() and eq.var_2[0].isupper()
+                    for eq in r.get_equalities()
+                ]
+            ):
+                for idx, eq in enumerate(r.body):
+                    assert isinstance(eq, Equality)
+                    if eq.var_2[0].islower() or eq.var_2[0].isdigit():
+                        print(f"Removing equality at position {idx+1} from rule {r}")
+                        if r in new_rules:
+                            new_rules.remove(r)
+                        remove_eq(prolog, r.rule_id, idx + 1)
+                        aba_framework = get_current_aba_framework(prolog)
+                        rem_eq_rules.append(aba_framework.background_knowledge[-1])
+
+    return (get_current_aba_framework(prolog), new_rules + rem_eq_rules)
+
+
+def too_specific(aba_framework, target) -> bool:
+    for r in aba_framework.background_knowledge:
+        if r.head.predicate == target.get_predicate():
+            if len(r.get_equalities()) == len(r.body):
+                if all(
+                    [
+                        not eq.var_1[0].isupper() or not eq.var_2[0].isupper()
+                        for eq in r.get_equalities()
+                    ]
+                ):
+                    return True
+    return False
+
+
 def abalearn(prolog) -> ABAFramework:
     aba_framework: ABAFramework = get_current_aba_framework(prolog)
     initial_pos_ex: list[Example] = aba_framework.positive_examples
     initial_neg_ex: list[Example] = aba_framework.negative_examples
-    while not (complete(prolog, initial_pos_ex) and consistent(prolog, initial_neg_ex)):
-        # Select target p for current iteration
-        target: Example = select_target(aba_framework.positive_examples)
+    curr_too_specific = False
+    while (
+        not (complete(prolog, initial_pos_ex) and consistent(prolog, initial_neg_ex))
+        or curr_too_specific
+    ):
+        if not curr_too_specific:
+            # Select target p for current iteration
+            target: Example = select_target(aba_framework.positive_examples)
 
-        # Generate rules for p via Rote Learning
-        aba_framework = generate_rules(prolog, target)
+            # Generate rules for p via Rote Learning
+            aba_framework = generate_rules(prolog, target)
 
         # Generalise via folding
         (aba_framework, new_rules) = fold_rules(
             prolog, aba_framework.background_knowledge, target.get_predicate()
+        )
+
+        # Generalise via equality removal
+        (aba_framework, new_rules) = remove_eqs(
+            prolog, aba_framework.background_knowledge, new_rules
         )
 
         ## Generalise via subsumption
@@ -434,11 +485,12 @@ def abalearn(prolog) -> ABAFramework:
                     (_, c_a) = aba_framework.contraries[-1]
 
                     aba_framework = add_examples(prolog, c_a.predicate, a_plus, a_minus)
-
-        # Remove examples about target
-        aba_framework = remove_all_examples(
-            prolog, aba_framework, target.get_predicate()
-        )
+        curr_too_specific = too_specific(aba_framework, target)
+        if not curr_too_specific:
+            # Remove examples about target
+            aba_framework = remove_all_examples(
+                prolog, aba_framework, target.get_predicate()
+            )
 
     print("Successfuly completed learning process!")
     aba_framework.create_file("solution.pl")

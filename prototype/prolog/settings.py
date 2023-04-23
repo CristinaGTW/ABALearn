@@ -38,6 +38,15 @@ def rem_rule(prolog, rule_id: str) -> None:
     list(prolog.query(query))
 
 
+def unfold_and_replace(prolog, rule: Rule) -> Rule:
+    new_rule = rule.extract_eqs()
+    query = f"rem_rule({rule.rule_id})."
+    list(prolog.query(query))
+    query = f"assertz({new_rule.to_prolog()[:-1]})."
+    list(prolog.query(query))
+    return new_rule
+
+
 def restore_framework(prolog, aba_framework) -> None:
     query = "retractall(my_rule(_,_,_))."
     list(prolog.query(query))

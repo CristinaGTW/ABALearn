@@ -52,7 +52,14 @@ def test_rule_to_prolog():
     assert prolog_rule == "my_rule(r_1,bird(X),[penguin(X)])."
 
 
+def test_extract_eqs():
+    rule = Rule.parse_rule("r1:path(A,B)<-arc(1,B),A=2")
+    with_eqs = rule.extract_eqs()
+    assert with_eqs.to_prolog() == "my_rule(r1,path(A,B),[arc(C,B),A=2,C=1])."
+
+
 ##### EXAMPLE TESTS
+
 
 def test_example_to_str():
     example = Example("e_1", Atom("flies", ["a"]))
