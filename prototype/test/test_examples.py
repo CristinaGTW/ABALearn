@@ -37,3 +37,15 @@ def test_robot_example():
         aba_framework.get_content()
         == open("prototype/test_resources/robot_example_solution.pl").read()
     )
+
+
+def test_path_example():
+    prolog = Prolog()
+    reset(prolog)
+    input = "prototype/test_resources/path_example.pl"
+    prolog = set_up_abalearn(input)
+    aba_framework = abalearn(prolog)
+    assert (
+        aba_framework.get_content()
+        == open("prototype/test_resources/path_example_solution.pl").read()
+    )

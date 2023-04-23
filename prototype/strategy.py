@@ -301,6 +301,26 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
                         new_rule = aba_framework.background_knowledge[-1]
                         if new_rule.has_constants():
                             new_rule = unfold_and_replace(prolog, new_rule)
+                        eqs_count = len(new_rule.get_equalities())
+                        if eqs_count > 0:
+                            for rule_3 in rules:
+                                if rule_3 != rule_1 and rule_3 != rule_2:
+                                    if foldable(prolog, new_rule.rule_id, rule_3.rule_id) and not check_loop(aba_framework, predicate, rule_3):
+                                        temp_framework = deepcopy(aba_framework)
+                                        print(f"Folding rule {new_rule} with rule {rule_3}")
+                                        fold(prolog, new_rule.rule_id, rule_3.rule_id)
+                                        aba_framework = get_current_aba_framework(prolog)
+                                        new_rule_2 = aba_framework.background_knowledge[-1]
+                                        if len(new_rule_2.get_equalities()) > 0:
+                                            print(
+                                                "Undoing previous fold as it wasn't optimal."
+                                            )
+                                            restore_framework(prolog, temp_framework)
+                                            aba_framework = get_current_aba_framework(prolog)
+                                        else:
+                                            new_rule = new_rule_2
+                                            new_vars_allowed += eqs_count
+                                            break
 
                         while len(new_rule.get_equalities()) > 0:
                             for i, b in enumerate(new_rule.body):
