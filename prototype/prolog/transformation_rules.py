@@ -27,3 +27,7 @@ def foldable(prolog, rule_id_1, rule_id_2) -> bool:
 def undercut(prolog, rule_id, atom_pos):
     query = f"undercut({rule_id},{atom_pos})."
     list(prolog.query(query))
+
+def gen_eqs(prolog, rule_id):
+    query = f"geneqs({rule_id})."
+    list(prolog.query(query))

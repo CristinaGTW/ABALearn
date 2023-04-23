@@ -5,6 +5,7 @@ from prolog.transformation_rules import (
     fold,
     remove_eq,
     foldable,
+    gen_eqs,
 )
 from prolog.settings import (
     add_pos_ex,
@@ -236,6 +237,10 @@ def generate_rules(prolog, ex: Example) -> ABAFramework:
         f'Applying "Rote Learning" to build rules for the predicate {ex.get_predicate()}.'
     )
     rote_learn_all(prolog, ex.get_predicate(), ex.get_arity())
+    aba_framework = get_current_aba_framework(prolog)
+    # Generalise equalities if possible
+    for r in aba_framework.background_knowledge:
+        gen_eqs(prolog, r.rule_id)
     return get_current_aba_framework(prolog)
 
 
