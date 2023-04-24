@@ -472,14 +472,16 @@ def can_still_learn(prolog, aba_framework: ABAFramework, initial_pos_ex) -> bool
 
 def ensure_has_initial_neg_ex(
     prolog, aba_framework: ABAFramework, initial_neg_ex: list[Example]
-) -> ABAFramework:
+) -> tuple[ABAFramework, list[str]]:
+    reintroduced = []
     for neg_ex in initial_neg_ex:
         if covered(prolog, [neg_ex]):
             if neg_ex.fact not in [ex.fact for ex in aba_framework.negative_examples]:
                 print(f"Reintroducing negative example {neg_ex}.")
                 add_neg_ex(prolog, neg_ex.fact)
+                reintroduced.append(neg_ex.get_predicate())
 
-    return get_current_aba_framework(prolog)
+    return (get_current_aba_framework(prolog), reintroduced)
 
 
 def ensure_has_initial_pos_ex(
@@ -501,14 +503,17 @@ def abalearn(prolog) -> ABAFramework:
     count = 0
     curr_complete = complete(prolog, initial_pos_ex)
     curr_consistent = consistent(prolog, initial_neg_ex)
+    can_fold = {}
 
     while not (curr_complete and curr_consistent) or can_still_learn(
         prolog, aba_framework, initial_pos_ex
     ):
         if not curr_consistent:
-            aba_framework = ensure_has_initial_neg_ex(
+            (aba_framework, reintroduced) = ensure_has_initial_neg_ex(
                 prolog, aba_framework, initial_neg_ex
             )
+            for ex in reintroduced:
+                can_fold[ex] = False
 
         if not curr_complete:
             aba_framework = ensure_has_initial_pos_ex(
@@ -519,6 +524,7 @@ def abalearn(prolog) -> ABAFramework:
         target: Example = select_target(aba_framework.positive_examples, learned)
         if target is not None:
             learned.append(target)
+            can_fold[target.get_predicate()] = True 
             # Generate rules for p via Rote Learning
             aba_framework = generate_rules(prolog, target)
         else:
@@ -526,10 +532,11 @@ def abalearn(prolog) -> ABAFramework:
             count += 1
             if count == len(learned):
                 count = 0
-        # Generalise via folding
-        (aba_framework, new_rules) = fold_rules(
-            prolog, aba_framework.background_knowledge, target.get_predicate()
-        )
+        if can_fold[target.get_predicate()]:
+            # Generalise via folding
+            (aba_framework, new_rules) = fold_rules(
+                prolog, aba_framework.background_knowledge, target.get_predicate()
+            )
 
         # Generalise via equality removal
         (aba_framework, new_rules) = remove_eqs(

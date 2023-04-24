@@ -14,6 +14,17 @@ def test_flies_example():
         == open("prototype/test_resources/flies_example_solution.pl").read()
     )
 
+def test_flies_2_example():
+    prolog = Prolog()
+    reset(prolog)
+    input = "prototype/test_resources/flies_2_example.pl"
+    prolog = set_up_abalearn(input)
+    aba_framework = abalearn(prolog)
+    assert (
+        aba_framework.get_content()
+        == open("prototype/test_resources/flies_2_example_solution.pl").read()
+    )
+
 
 def test_robber_example():
     prolog = Prolog()
