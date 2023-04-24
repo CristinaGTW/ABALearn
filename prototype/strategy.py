@@ -223,15 +223,24 @@ def get_constants(
 
 
 # Selects as target the examples whose predicate has most occurrences
-def select_target(exs: list[Example]) -> Example:
+def select_target(exs: list[Example], learned: list[Example]) -> Example | None:
     counter_dict: dict[str, int] = {}
     max_count = -1
-    most_common_pred: Example = exs[0]
-    for ex in exs:
-        counter_dict[ex.get_predicate()] = counter_dict.get(ex.get_predicate(), 0) + 1
-        if counter_dict[ex.get_predicate()] > max_count:
-            max_count = counter_dict[ex.get_predicate()]
-            most_common_pred = ex
+    if len(exs) > 0:
+        most_common_pred: Example = exs[0]
+        learned_predicates = [ex.get_predicate() for ex in learned]
+        for ex in exs:
+            counter_dict[ex.get_predicate()] = (
+                counter_dict.get(ex.get_predicate(), 0) + 1
+            )
+            if (
+                counter_dict[ex.get_predicate()] > max_count
+                and ex.get_predicate() not in learned_predicates
+            ):
+                max_count = counter_dict[ex.get_predicate()]
+                most_common_pred = ex
+    if max_count == -1:
+        return None
     return most_common_pred
 
 
@@ -287,7 +296,7 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
     introduced_neg = False
     new_vars_allowed = 0
     undone = False
-    while new_rules == []:
+    while new_rules == [] and new_vars_allowed < 10:
         for rule_1 in rules:
             for rule_2 in rules:
                 if rule_1.head.predicate == predicate:
@@ -384,14 +393,13 @@ def assumption_introduction(prolog, rule, atom_pos) -> ABAFramework:
     return get_current_aba_framework(prolog)
 
 
-def remove_all_examples(prolog, aba_framework, predicate) -> ABAFramework:
-    print(f"Removing all examples about {predicate}")
-    for pos_ex in aba_framework.positive_examples:
-        if pos_ex.get_predicate() == predicate:
-            rem_pos_ex(prolog, pos_ex.example_id)
-    for neg_ex in aba_framework.negative_examples:
-        if neg_ex.get_predicate() == predicate:
-            rem_neg_ex(prolog, neg_ex.example_id)
+def remove_examples(prolog, pos_exs, neg_exs) -> ABAFramework:
+    for pos_ex in pos_exs:
+        print(f"Removing example {pos_ex}")
+        rem_pos_ex(prolog, pos_ex.example_id)
+    for neg_ex in neg_exs:
+        print(f"Removing example {neg_ex}")
+        rem_neg_ex(prolog, neg_ex.example_id)
     return get_current_aba_framework(prolog)
 
 
@@ -442,36 +450,82 @@ def remove_eqs(prolog, rules: list[Rule], new_rules):
     return (get_current_aba_framework(prolog), new_rules + rem_eq_rules)
 
 
-def too_specific(aba_framework, target) -> bool:
-    for r in aba_framework.background_knowledge:
-        if r.head.predicate == target.get_predicate():
-            if len(r.get_equalities()) == len(r.body):
+def can_still_learn(prolog, aba_framework: ABAFramework, initial_pos_ex) -> bool:
+    for pos_ex in initial_pos_ex:
+        top_rules = find_top_rule(prolog, aba_framework, pos_ex)
+        safe = False
+        for r in top_rules:
+            if len(r.body) == len(r.get_equalities()):
                 if all(
                     [
-                        not eq.var_1[0].isupper() or not eq.var_2[0].isupper()
+                        eq.var_1[0].isupper() and eq.var_2[0].isupper()
                         for eq in r.get_equalities()
                     ]
                 ):
-                    return True
+                    safe = True
+            else:
+                safe = True
+        if not safe:
+            return True
     return False
+
+
+def ensure_has_initial_neg_ex(
+    prolog, aba_framework: ABAFramework, initial_neg_ex: list[Example]
+) -> ABAFramework:
+    for neg_ex in initial_neg_ex:
+        if covered(prolog, [neg_ex]):
+            if neg_ex.fact not in [ex.fact for ex in aba_framework.negative_examples]:
+                print(f"Reintroducing negative example {neg_ex}.")
+                add_neg_ex(prolog, neg_ex.fact)
+
+    return get_current_aba_framework(prolog)
+
+
+def ensure_has_initial_pos_ex(
+    prolog, aba_framework: ABAFramework, initial_pos_ex: list[Example]
+):
+    for pos_ex in initial_pos_ex:
+        if not covered(prolog, [pos_ex]):
+            if pos_ex.fact not in [ex.fact for ex in aba_framework.positive_examples]:
+                print(f"Reintroducing positive example {pos_ex}.")
+                add_pos_ex(prolog, pos_ex.fact)
+    return get_current_aba_framework(prolog)
 
 
 def abalearn(prolog) -> ABAFramework:
     aba_framework: ABAFramework = get_current_aba_framework(prolog)
     initial_pos_ex: list[Example] = aba_framework.positive_examples
     initial_neg_ex: list[Example] = aba_framework.negative_examples
-    curr_too_specific = False
-    while (
-        not (complete(prolog, initial_pos_ex) and consistent(prolog, initial_neg_ex))
-        or curr_too_specific
-    ):
-        if not curr_too_specific:
-            # Select target p for current iteration
-            target: Example = select_target(aba_framework.positive_examples)
+    learned = []
+    count = 0
+    curr_complete = complete(prolog, initial_pos_ex)
+    curr_consistent = consistent(prolog, initial_neg_ex)
 
+    while not (curr_complete and curr_consistent) or can_still_learn(
+        prolog, aba_framework, initial_pos_ex
+    ):
+        if not curr_consistent:
+            aba_framework = ensure_has_initial_neg_ex(
+                prolog, aba_framework, initial_neg_ex
+            )
+
+        if not curr_complete:
+            aba_framework = ensure_has_initial_pos_ex(
+                prolog, aba_framework, initial_pos_ex
+            )
+
+        # Select target p for current iteration
+        target: Example = select_target(aba_framework.positive_examples, learned)
+        if target is not None:
+            learned.append(target)
             # Generate rules for p via Rote Learning
             aba_framework = generate_rules(prolog, target)
-
+        else:
+            target = learned[count]
+            count += 1
+            if count == len(learned):
+                count = 0
         # Generalise via folding
         (aba_framework, new_rules) = fold_rules(
             prolog, aba_framework.background_knowledge, target.get_predicate()
@@ -517,12 +571,46 @@ def abalearn(prolog) -> ABAFramework:
                     (_, c_a) = aba_framework.contraries[-1]
 
                     aba_framework = add_examples(prolog, c_a.predicate, a_plus, a_minus)
-        curr_too_specific = too_specific(aba_framework, target)
-        if not curr_too_specific:
-            # Remove examples about target
-            aba_framework = remove_all_examples(
-                prolog, aba_framework, target.get_predicate()
-            )
+        (cov_pos_ex, cov_neg_ex) = find_covered_ex(prolog, aba_framework, target)
+        true_cov_pos_ex = []
+        for pos_ex in aba_framework.positive_examples:
+            top_rules = find_top_rule(prolog, aba_framework, pos_ex)
+            safe = False
+            for r in top_rules:
+                if len(r.body) == len(r.get_equalities()):
+                    if all(
+                        [
+                            eq.var_1[0].isupper() and eq.var_2[0].isupper()
+                            for eq in r.get_equalities()
+                        ]
+                    ):
+                        safe = True
+                else:
+                    safe = True
+            if safe:
+                true_cov_pos_ex.append(pos_ex)
+
+        not_cov_neg_ex = []
+        for neg_ex in aba_framework.negative_examples:
+            if not covered(prolog, [neg_ex]):
+                if any(
+                    [
+                        r.head.predicate == neg_ex.get_predicate()
+                        for r in aba_framework.background_knowledge
+                    ]
+                ):
+                    not_cov_neg_ex.append(neg_ex)
+
+        # Remove examples about target
+        aba_framework = remove_examples(prolog, true_cov_pos_ex, not_cov_neg_ex)
+
+        curr_complete = complete(prolog, initial_pos_ex)
+        curr_consistent = consistent(prolog, initial_neg_ex)
+
+    # Remove all remaining examples
+    aba_framework = remove_examples(
+        prolog, aba_framework.positive_examples, aba_framework.negative_examples
+    )
 
     print("Successfuly completed learning process!")
     aba_framework.create_file("solution.pl")
