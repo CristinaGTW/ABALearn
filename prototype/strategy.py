@@ -70,12 +70,14 @@ def top_rule_helper(
             cov = covered(prolog, [ex])
             if not cov:
                 for r_rule in removed_rules:
-                    list(prolog.query(f"assert({r_rule.to_prolog()[:-1]})."))
-                    cov = covered(prolog, [ex])
-                    if cov:
-                        curr_top_rules.append(r_rule)
-                list(prolog.query(f"assert({rule.to_prolog()[:-1]})."))
-                curr_top_rules.append(rule)
+                    if r_rule not in get_rules(prolog):
+                        list(prolog.query(f"assert({r_rule.to_prolog()[:-1]})."))
+                        cov = covered(prolog, [ex])
+                        if cov:
+                            curr_top_rules.append(r_rule)
+                if rule not in get_rules(prolog):
+                    list(prolog.query(f"assert({rule.to_prolog()[:-1]})."))
+                    curr_top_rules.append(rule)
             else:
                 removed_rules.append(rule)
                 curr_top_rules += top_rule_helper(
@@ -305,18 +307,30 @@ def fold_rules(prolog, rules: list[Rule], predicate: str) -> ABAFramework:
                         if eqs_count > 0:
                             for rule_3 in rules:
                                 if rule_3 != rule_1 and rule_3 != rule_2:
-                                    if foldable(prolog, new_rule.rule_id, rule_3.rule_id) and not check_loop(aba_framework, predicate, rule_3):
+                                    if foldable(
+                                        prolog, new_rule.rule_id, rule_3.rule_id
+                                    ) and not check_loop(
+                                        aba_framework, predicate, rule_3
+                                    ):
                                         temp_framework = deepcopy(aba_framework)
-                                        print(f"Folding rule {new_rule} with rule {rule_3}")
+                                        print(
+                                            f"Folding rule {new_rule} with rule {rule_3}"
+                                        )
                                         fold(prolog, new_rule.rule_id, rule_3.rule_id)
-                                        aba_framework = get_current_aba_framework(prolog)
-                                        new_rule_2 = aba_framework.background_knowledge[-1]
+                                        aba_framework = get_current_aba_framework(
+                                            prolog
+                                        )
+                                        new_rule_2 = aba_framework.background_knowledge[
+                                            -1
+                                        ]
                                         if len(new_rule_2.get_equalities()) > 0:
                                             print(
                                                 "Undoing previous fold as it wasn't optimal."
                                             )
                                             restore_framework(prolog, temp_framework)
-                                            aba_framework = get_current_aba_framework(prolog)
+                                            aba_framework = get_current_aba_framework(
+                                                prolog
+                                            )
                                         else:
                                             new_rule = new_rule_2
                                             new_vars_allowed += eqs_count
@@ -480,7 +494,6 @@ def abalearn(prolog) -> ABAFramework:
                 neg_top_rules.append(rule)
         aba_framework = get_current_aba_framework(prolog)
         neg_top_rules = set(neg_top_rules)
-
         # Learn exceptions for each top rule of an argument for covered negative examples
         for rule in neg_top_rules:
             if rule.head.predicate == target.get_predicate():
@@ -488,7 +501,6 @@ def abalearn(prolog) -> ABAFramework:
                 idxs = [
                     0
                 ]  # Currently takes in consideration first atom in the body of the rule
-
                 # Construct the two sets of constants consts(A+) and consts(A-)
                 (cov_pos_ex, cov_neg_ex) = find_covered_ex(
                     prolog, aba_framework, target
