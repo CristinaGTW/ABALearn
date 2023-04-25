@@ -427,29 +427,6 @@ def find_covered_ex(prolog, aba_framework, target):
     return (cov_pos_ex, cov_neg_ex)
 
 
-def remove_eqs(prolog, rules: list[Rule], new_rules):
-    rem_eq_rules = []
-    for r in rules:
-        if len(r.get_equalities()) == len(r.body):
-            if any(
-                [
-                    eq.var_1[0].isupper() and eq.var_2[0].isupper()
-                    for eq in r.get_equalities()
-                ]
-            ):
-                for idx, eq in enumerate(r.body):
-                    assert isinstance(eq, Equality)
-                    if eq.var_2[0].islower() or eq.var_2[0].isdigit():
-                        print(f"Removing equality at position {idx+1} from rule {r}")
-                        if r in new_rules:
-                            new_rules.remove(r)
-                        remove_eq(prolog, r.rule_id, idx + 1)
-                        aba_framework = get_current_aba_framework(prolog)
-                        rem_eq_rules.append(aba_framework.background_knowledge[-1])
-
-    return (get_current_aba_framework(prolog), new_rules + rem_eq_rules)
-
-
 def can_still_learn(prolog, aba_framework: ABAFramework, initial_pos_ex) -> bool:
     for pos_ex in initial_pos_ex:
         top_rules = find_top_rule(prolog, aba_framework, pos_ex)
@@ -524,7 +501,7 @@ def abalearn(prolog) -> ABAFramework:
         target: Example = select_target(aba_framework.positive_examples, learned)
         if target is not None:
             learned.append(target)
-            can_fold[target.get_predicate()] = True 
+            can_fold[target.get_predicate()] = True
             # Generate rules for p via Rote Learning
             aba_framework = generate_rules(prolog, target)
         else:
@@ -537,11 +514,6 @@ def abalearn(prolog) -> ABAFramework:
             (aba_framework, new_rules) = fold_rules(
                 prolog, aba_framework.background_knowledge, target.get_predicate()
             )
-
-        # Generalise via equality removal
-        (aba_framework, new_rules) = remove_eqs(
-            prolog, aba_framework.background_knowledge, new_rules
-        )
 
         ## Generalise via subsumption
         aba_framework = remove_subsumed(prolog, aba_framework, new_rules)
