@@ -16,9 +16,9 @@ my_rule(r_13,flies(A),[bird(A),alpha1(A)]).
 % Negative Examples 
 
 % Assumptions 
-my_asm(alpha1(ZA)).
-my_asm(alpha2(ZA)).
+my_asm(alpha1(A)).
+my_asm(alpha2(A)).
 
 % Contraries 
-contrary(alpha1(ZA),c_alpha1(ZA)).
-contrary(alpha2(ZA),c_alpha2(ZA)).
+contrary(alpha1(A),c_alpha1(A)).
+contrary(alpha2(A),c_alpha2(A)).
