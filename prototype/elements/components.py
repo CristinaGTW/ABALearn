@@ -22,7 +22,7 @@ class Atom:
                 if arg in var_dict:
                     var = var_dict[arg]
                 else:
-                    var = "Z" + chr(ord("A") + count)
+                    var = chr(ord("A") + count)
                     var_dict[arg] = var
                     count += 1
                 arguments[idx] = var
