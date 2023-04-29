@@ -59,15 +59,22 @@ def get_con_body_map(prolog) -> dict[str, list[str]]:
     return con_bodies
 
 
-def get_current_aba_framework(prolog) -> ABAFramework:
+def get_current_aba_framework(prolog, aba_framework) -> ABAFramework:
     rules: list[Rule] = get_rules(prolog)
     pos_exs: list[Example] = get_positive_examples(prolog)
     neg_exs: list[Example] = get_negative_examples(prolog)
     assumptions: list[Atom] = get_assumptions(prolog)
     contraries: list[tuple[Atom, Atom]] = get_contraries(prolog)
     con_body_map: dict[str, list[str]] = get_con_body_map(prolog)
-    aba_framework: ABAFramework = ABAFramework(
-        rules, pos_exs, neg_exs, assumptions, contraries, con_body_map
-    )
+    if aba_framework is not None:
+        con_pos_ex_map: dict[str, list[str]] = aba_framework.con_pos_ex_map
+        con_neg_ex_map: dict[str, list[str]] = aba_framework.con_neg_ex_map
+        aba_framework: ABAFramework = ABAFramework(
+            rules, pos_exs, neg_exs, assumptions, contraries, con_body_map, con_pos_ex_map, con_neg_ex_map
+        )
+    else: 
+        aba_framework: ABAFramework = ABAFramework(
+            rules, pos_exs, neg_exs, assumptions, contraries, con_body_map, {}, {}
+        )
 
     return aba_framework

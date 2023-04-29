@@ -10,6 +10,8 @@ class ABAFramework:
     assumptions: list[Atom]
     contraries: list[tuple[Atom, Atom]]
     con_body_map: dict[str, list[str]]
+    con_pos_ex_map: dict[str, list[str]]
+    con_neg_ex_map: dict[str, list[str]]
 
     def create_file(self, filename: str):
         f = open(filename, "w")
