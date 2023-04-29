@@ -465,20 +465,23 @@ def replace_equiv_contrary(
 ):
     print(f"Replacing {c_a} with {eq_c} as they are equivalent")
     for idx, rule in enumerate(aba_framework.background_knowledge):
-        if rule.head.predicate == c_a.predicate:
+        if rule.head.predicate == c_a:
             aba_framework.background_knowledge[idx].head.predicate = eq_c
-        elif rule.head.predicate == a.predicate:
+        elif rule.head.predicate == a:
             aba_framework.background_knowledge[idx].head.predicate = eq_a
         else:
             for i, b in enumerate(rule.body):
                 if isinstance(b, Atom):
-                    if b.predicate == c_a.predicate:
+                    if b.predicate == c_a:
                         aba_framework.background_knowledge[idx].body[i].predicate = eq_c
-                    if b.predicate == a.predicate:
+                    if b.predicate == a:
                         aba_framework.background_knowledge[idx].body[i].predicate = eq_a
 
     aba_framework.contraries = filter(
-        lambda c: c[1].predicate != c_a.predicate, aba_framework.contraries
+        lambda c: c[1].predicate != c_a, aba_framework.contraries
+    )
+    aba_framework.assumptions = filter(
+        lambda x: x.predicate != a, aba_framework.assumptions
     )
     restore_framework(prolog, aba_framework)
     return get_current_aba_framework(prolog, aba_framework)
@@ -630,7 +633,12 @@ def abalearn(prolog) -> ABAFramework:
                         )
                     else:
                         aba_framework = replace_equiv_contrary(
-                            prolog, aba_framework, a, c_a, eq_a, eq_c
+                            prolog,
+                            aba_framework,
+                            a.predicate,
+                            c_a.predicate,
+                            eq_a,
+                            eq_c,
                         )
         (cov_pos_ex, cov_neg_ex) = find_covered_ex(prolog, aba_framework, target)
         true_cov_pos_ex = []
