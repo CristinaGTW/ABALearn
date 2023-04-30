@@ -97,8 +97,7 @@ fold(R1,R2) :-
 foldable(R1,R2,Subconj) :-
    R1\=R2,                
    my_rule(R1,H,Bd1),
-   my_rule(R2,K,Bd2),
-   H\=K,    
+   my_rule(R2,K,Bd2),    
    term_variables(K,VK),
    hdequalities(VK,Bd2,Eqs2,Eqs1B1),
    select_sublist(Eqs2,SEqs2,_),
