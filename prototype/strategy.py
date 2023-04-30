@@ -57,6 +57,67 @@ def get_solutions(prolog, rule: Rule) -> list[tuple[str, ...]]:
     return sols
 
 
+def further_generalisation(
+    prolog, aba_framework: ABAFramework, predicate: str, initial_pos_ex, initial_neg_ex
+):
+    print("Attempting to further generalise...")
+    rules = aba_framework.background_knowledge
+    aba_framework = get_current_aba_framework(prolog, aba_framework)
+    new_vars_allowed = 0
+    undone = False
+    new_rules = [""]
+    while new_rules != []:
+        new_rules = []
+        for rule_1 in rules:
+            for rule_2 in rules:
+                if rule_1.head.predicate == predicate:
+                    undone = False
+                    if foldable(
+                        prolog, rule_1.rule_id, rule_2.rule_id
+                    ) and not check_loop(aba_framework, predicate, rule_2):
+                        prev_framework = deepcopy(aba_framework)
+                        print(f"Folding rule {rule_1} with rule {rule_2}")
+                        fold(prolog, rule_1.rule_id, rule_2.rule_id)
+                        aba_framework = get_current_aba_framework(prolog, aba_framework)
+                        new_rule = aba_framework.background_knowledge[-1]
+                        if new_rule.has_constants():
+                            new_rule = unfold_and_replace(prolog, new_rule)
+
+                        while len(new_rule.get_equalities()) > 0:
+                            for i, b in enumerate(new_rule.body):
+                                if isinstance(b, Equality) and (
+                                    b.var_2[0].islower() or b.var_2[0].isdigit()
+                                ):
+                                    print(
+                                        f"Removing equality at position {i+1} from rule {new_rule}"
+                                    )
+                                    remove_eq(prolog, new_rule.rule_id, i + 1)
+                            aba_framework = get_current_aba_framework(
+                                prolog, aba_framework
+                            )
+                            new_rule = aba_framework.background_knowledge[-1]
+
+                        if (
+                            count_new_vars(new_rule, rule_1, rule_2) > new_vars_allowed
+                            and not undone
+                        ):
+                            print(
+                                "Undoing previous fold as it introduced too many new variables."
+                            )
+                            restore_framework(prolog, prev_framework)
+                            aba_framework = get_current_aba_framework(
+                                prolog, aba_framework
+                            )
+                            undone = True
+                        if not undone:
+                            new_rules += [new_rule]
+        rules = aba_framework.background_knowledge
+
+    aba_framework = get_current_aba_framework(prolog, aba_framework)
+
+    return aba_framework
+
+
 def top_rule_helper(
     prolog,
     ex: Example,
@@ -316,7 +377,11 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramew
                         eqs_count = len(new_rule.get_equalities())
                         if eqs_count > 0:
                             for rule_3 in rules:
-                                if rule_3 != rule_1 and rule_3 != rule_2:
+                                if (
+                                    rule_3 != rule_1
+                                    and rule_3 != rule_2
+                                    and new_rule.head.predicate != rule_3.head.predicate
+                                ):
                                     if foldable(
                                         prolog, new_rule.rule_id, rule_3.rule_id
                                     ) and not check_loop(
@@ -544,7 +609,7 @@ def abalearn(prolog) -> ABAFramework:
     curr_complete = complete(prolog, initial_pos_ex)
     curr_consistent = consistent(prolog, initial_neg_ex)
     can_fold = {}
-
+    initial_goal = ""
     while not (curr_complete and curr_consistent) or can_still_learn(
         prolog, aba_framework, initial_pos_ex
     ):
@@ -582,6 +647,10 @@ def abalearn(prolog) -> ABAFramework:
             count += 1
             if count == len(learned):
                 count = 0
+
+        if initial_goal == "":
+            initial_goal = target
+
         if can_fold[target.get_predicate()]:
             # Generalise via folding
             (aba_framework, new_rules) = fold_rules(
@@ -688,7 +757,15 @@ def abalearn(prolog) -> ABAFramework:
     )
 
     print("Successfuly completed learning process!")
+    aba_framework = further_generalisation(
+        prolog,
+        aba_framework,
+        initial_goal.get_predicate(),
+        initial_pos_ex,
+        initial_neg_ex,
+    )
     aba_framework.create_file("solution.pl")
+    print("Finished.")
     return aba_framework
 
 
