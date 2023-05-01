@@ -3,5 +3,5 @@
 
 To run:
 ```
-python prototype/strategy.py <input_file_path>
+python strategy.py <input_file_path>
 ```

@@ -15,7 +15,7 @@ my_rule(r_41,free(A),[step(A,B),alpha1(A,B)]).
 % Negative Examples 
 
 % Assumptions 
-my_asm(alpha1(A,_5232)).
+my_asm(alpha1(A,B)).
 
 % Contraries 
-contrary(alpha1(A,_5246),c_alpha1(A,_5246)).
+contrary(alpha1(A,B),c_alpha1(A,B)).

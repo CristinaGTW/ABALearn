@@ -13,6 +13,7 @@ class Atom:
         arguments = arguments_str.split(",")
         count = 0
         var_dict = {}
+        arguments = [arg.strip() for arg in arguments]
         for idx, arg in enumerate(arguments):
             if "$VAR(" in arg:
                 n = int(arg[arg.find("$") + 5 : -1])
