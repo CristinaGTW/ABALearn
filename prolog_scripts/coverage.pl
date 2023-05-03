@@ -55,4 +55,3 @@ attacks((ConcA,AsmA),(ConcB,AsmB)) :-
 	argument((ConcB,AsmB)),
 	member(OneAsm,AsmB).
 
-
