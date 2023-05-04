@@ -14,6 +14,7 @@ class ABAFramework:
     con_body_map: dict[str, list[str]]
     con_pos_ex_map: dict[str, list[str]]
     con_neg_ex_map: dict[str, list[str]]
+    language: dict[str, int] = field(default_factory=lambda: defaultdict(dict))
 
     def create_file(self, filename: str):
         f = open(filename, "w")
@@ -49,6 +50,9 @@ class ABAFramework:
         (all_instantiations, consts) = self.get_all_instantiations_and_consts()
         assumptions = self.get_all_assumptions(consts)
         contraries = self.get_all_contraries(consts)
+        all_instantiations.sort()
+        assumptions.sort()
+        contraries.sort()
         language = []
         for r in all_instantiations:
             for atom in r:
@@ -65,6 +69,7 @@ class ABAFramework:
         lang_map = {}
         for i, lang in enumerate(language):
             lang_map[lang] = i
+        self.language = lang_map
         for r in all_instantiations:
             asp_translation += 'r '
             for atom in r:
@@ -87,6 +92,9 @@ class ABAFramework:
         f = open(filename, "w")
         f.write(asp_translation)
         f.close()
+    
+
+
 
     def get_all_assumptions(self, consts):
         ret = []
