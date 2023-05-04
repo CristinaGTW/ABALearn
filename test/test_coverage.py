@@ -7,7 +7,6 @@ from prolog.info import get_current_aba_framework
 def test_covers():
     prolog = set_up_abalearn("test_resources/flies_example.pl")
     aba_framework = get_current_aba_framework(prolog, None)
-    breakpoint()
     result = covered(
         aba_framework,
         [
@@ -22,7 +21,6 @@ def test_covers():
 def test_not_covers():
     prolog = set_up_abalearn("test_resources/flies_example.pl")
     aba_framework = get_current_aba_framework(prolog, None)
-    breakpoint()
 
     result = covered(
         aba_framework,
@@ -38,7 +36,6 @@ def test_not_covers():
 def test_get_covered_solutions():
     prolog = set_up_abalearn("test_resources/flies_example.pl")
     aba_framework = get_current_aba_framework(prolog, None)
-    breakpoint()
 
     result = get_covered_solutions(aba_framework, Atom("bird", ["X"]))
 
@@ -50,3 +47,5 @@ def test_get_covered_solutions():
         {"X": "e"},
         {"X": "f"},
     ]
+
+

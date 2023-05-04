@@ -613,7 +613,6 @@ def abalearn(prolog) -> ABAFramework:
     curr_consistent = consistent(aba_framework, initial_neg_ex)
     can_fold = {}
     initial_goal = ""
-    #breakpoint()
     while not (curr_complete and curr_consistent) or can_still_learn(
         prolog, aba_framework, initial_pos_ex
     ):
@@ -676,6 +675,7 @@ def abalearn(prolog) -> ABAFramework:
         # Learn exceptions for each top rule of an argument for covered negative examples
         for rule in neg_top_rules:
             if rule.head.predicate == target.get_predicate():
+           
                 # Choose which variables to consider
                 idxs = [
                     0

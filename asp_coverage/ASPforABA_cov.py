@@ -1,9 +1,9 @@
 from elements.aba_framework import ABAFramework
 from elements.components import Example, Atom
-import subprocess
+from aspforaba.aspforaba import ASPforABA
 
 def covered(aba_framework: ABAFramework, exs:list[Example]) -> bool:
-    aba_framework.to_asp("covered.txt")
+    aspforaba_obj = aba_framework.to_asp()
     for example in exs:
         ex_str = example.get_predicate() + '('
         for arg in example.get_arguments():
@@ -12,7 +12,7 @@ def covered(aba_framework: ABAFramework, exs:list[Example]) -> bool:
         ex_str += ')'
         if ex_str not in aba_framework.language:
             return False
-        cov = run_asp_for_aba(aba_framework.language[ex_str] + 1)
+        cov = run_asp_for_aba(aspforaba_obj, aba_framework.language[ex_str] + 1)
         if not cov:
             return False
     return True
@@ -20,7 +20,7 @@ def covered(aba_framework: ABAFramework, exs:list[Example]) -> bool:
 
 # Finds all values sol for which atom.predicate(sol) is covered
 def get_covered_solutions(aba_framework:ABAFramework, atom: Atom) -> list[dict]:
-    aba_framework.to_asp("covered.txt")
+    aspforaba_obj=aba_framework.to_asp()
     candidates = []
     sols = []
     for k in aba_framework.language:
@@ -28,7 +28,7 @@ def get_covered_solutions(aba_framework:ABAFramework, atom: Atom) -> list[dict]:
         if predicate == atom.predicate:
             candidates.append(k)
     for c in candidates:
-        if run_asp_for_aba(aba_framework.language[c]+1):
+        if run_asp_for_aba(aspforaba_obj, aba_framework.language[c]+1):
             a = Atom.parse_atom(c)
             sols.append(dict(zip(atom.arguments, a.arguments)))
     return sols
@@ -49,7 +49,7 @@ def count_covered(aba_framework) -> tuple[int, int]:
     return (pos_count, neg_count)
 
 
-def run_asp_for_aba(example: str) -> bool:
-    proc = subprocess.Popen(f'python aspforaba/aspforaba.py -p DC-CO -f covered.txt -a {example}', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    result = proc.communicate()[0].decode()
-    return result =='YES\n'
+def run_asp_for_aba(aspforaba_obj:ASPforABA,example: int) -> bool:
+    clingo_loc = 'aspforaba/clingo/bin/clingo'
+    res = aspforaba_obj.credulous(clingo_loc,'CO',example)
+    return res

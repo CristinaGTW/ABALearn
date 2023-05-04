@@ -171,6 +171,7 @@ poetry.toml
 .ruff_cache/
 
 ### VisualStudioCode ###
+.vscode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -188,5 +189,9 @@ poetry.toml
 # Ignore all local history of files
 .history
 .ionide
+
+tmp*
+solution.pl
+*.txt
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python

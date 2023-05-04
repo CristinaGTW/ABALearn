@@ -46,8 +46,7 @@ class ABAFramework:
 
         return content
 
-    def to_asp(self, filename: str):
-        asp_translation = 'p aba '
+    def to_asp(self):
         (all_instantiations, consts) = self.get_all_instantiations_and_consts()
         assumptions = self.get_all_assumptions(consts)
         contraries = self.get_all_contraries(consts)
@@ -58,40 +57,31 @@ class ABAFramework:
         for r in all_instantiations:
             for atom in r:
                 language.append(atom)
-        for r in assumptions:
-            for atom in r:
-                language.append(atom)
-        for r in contraries:
-            for atom in r:
+        for a in assumptions:
+            language.append(a[0])
+        for c in contraries:
+            for atom in c:
                 language.append(atom)
         language = list(set(language))
         language.sort()
-        asp_translation += f'{len(language)}' + '\n'
         lang_map = {}
         for i, lang in enumerate(language):
             lang_map[lang] = i
         self.language = lang_map
+
+        aspforaba_obj = ASPforABA()
         for r in all_instantiations:
-            asp_translation += 'r '
-            for atom in r:
-                asp_translation += f'{lang_map[atom] + 1}' + ' '
-            asp_translation = asp_translation[:-1]
-            asp_translation += '\n'
+            rule = (lang_map[r[0]]+1, [])
+            for atom in r[1:]:
+                rule[1].append(lang_map[atom] + 1)
+            if rule not in aspforaba_obj.rules:
+                aspforaba_obj.rules.append(rule)
         for a in assumptions:
-            asp_translation += 'a '
-            for atom in a:
-                asp_translation += f'{lang_map[atom] + 1}' + ' '
-            asp_translation = asp_translation[:-1]
-            asp_translation += '\n'
+            aspforaba_obj.assumptions.append(lang_map[a[0]] + 1)
         for c in contraries:
-            asp_translation += 'c '
-            for atom in c:
-                asp_translation += f'{lang_map[atom] + 1}' + ' '
-            asp_translation = asp_translation[:-1]
-            asp_translation += '\n'
-
-
-
+            aspforaba_obj.contraries.append(
+                (lang_map[c[0]]+1, lang_map[c[1]]+1))
+        return aspforaba_obj
 
     def get_all_assumptions(self, consts):
         ret = []
@@ -149,7 +139,8 @@ class ABAFramework:
             for j, a in enumerate(r.head.arguments):
                 if a in var_val_map:
                     rules[i].head.arguments[j] = var_val_map[r.rule_id][a]
-        consts = set(consts)
+        consts = list(set(consts))
+        consts.sort()
         ret = []
         for r in rules:
             atoms = [r.head] + r.get_atoms()
@@ -159,10 +150,12 @@ class ABAFramework:
                 curr_atoms_args[i] = []
             self._get_all_groundings(
                 atoms, 0, 0, var_val_map[r.rule_id], curr_atoms_args, consts, result)
+            
             ret += result
         return (ret, consts)
 
     def _get_all_groundings(self, atoms: list[Atom], idx: int, arg_idx: int, var_val_map: dict[str, str], curr_atoms_args: dict[int, list[str]], consts: list[str], result: list[list[str]]):
+        
         while idx < len(atoms):
             while arg_idx < len(atoms[idx].arguments):
                 arg = atoms[idx].arguments[arg_idx]
@@ -179,6 +172,7 @@ class ABAFramework:
                                 curr_atoms_args, arg, c)
                             self._get_all_groundings(
                                 atoms, idx, arg_idx+1, var_val_map, curr_atoms_args, consts, result)
+                            
                         arg_idx += 1
                     else:
                         curr_atoms_args[idx] = prev_args+[arg]
@@ -195,6 +189,8 @@ class ABAFramework:
             instantiation += [atom_str]
         if instantiation not in result:
             result.append(instantiation)
+        else:
+            var_val_map.popitem()
 
     def _replace_all(self, d: dict[int, list[str]], a: str, b: str):
         for k in d:
