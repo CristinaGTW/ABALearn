@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from elements.components import Rule, Example, Atom, Equality
 from copy import deepcopy
 from collections import defaultdict
+from aspforaba.aspforaba import ASPforABA
 
 
 @dataclass
@@ -89,10 +90,6 @@ class ABAFramework:
             asp_translation = asp_translation[:-1]
             asp_translation += '\n'
 
-        f = open(filename, "w")
-        f.write(asp_translation)
-        f.close()
-    
 
 
 

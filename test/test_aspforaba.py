@@ -44,5 +44,4 @@ def test_aspforaba_covered():
     aba_framework = ABAFramework(
         background_knowledge, [], [], [], [], {}, {}, {})
     ex = Example("e", Atom.parse_atom("p(1,2)"))
-    breakpoint()
-    assert covered(aba_framework, ex)
+    assert covered(aba_framework, [ex])
