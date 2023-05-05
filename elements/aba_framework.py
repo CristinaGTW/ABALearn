@@ -133,7 +133,7 @@ class ABAFramework:
                                 rules[i].body[j].arguments[k] = var_val_map[r.rule_id][a]
                                 no_change = False
                     if isinstance(b, Equality):
-                        if b.var_2 in var_val_map[r.rule_id] and var_val_map[r.rule_id][b.var_2] != b.var_1:
+                        if b.var_2 in var_val_map[r.rule_id] and var_val_map[r.rule_id][b.var_2] != var_val_map[r.rule_id][b.var_1]:
                             var_val_map[r.rule_id][b.var_1] = var_val_map[r.rule_id][b.var_2]
                             no_change = False
             for j, a in enumerate(r.head.arguments):

@@ -24,9 +24,16 @@ def get_covered_solutions(aba_framework:ABAFramework, atom: Atom) -> list[dict]:
     candidates = []
     sols = []
     for k in aba_framework.language:
-        predicate = k.split('(')[0]
-        if predicate == atom.predicate:
-            candidates.append(k)
+        k_atom = Atom.parse_atom(k)
+        if k_atom.predicate == atom.predicate:
+            args_match = True
+            for i,arg in enumerate(atom.arguments):
+                if not arg[0].isupper():
+                    if k_atom.arguments[i] != arg:
+                        args_match = False
+                        break
+            if args_match:
+                candidates.append(k)
     for c in candidates:
         if run_asp_for_aba(aspforaba_obj, aba_framework.language[c]+1):
             a = Atom.parse_atom(c)

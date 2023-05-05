@@ -230,8 +230,9 @@ def find_justified_groundings(
         if isinstance(b, Atom):
             if not covered(aba_framework, [Example("fake_ex", b)]):
                 return result
-    return result + [body_copy]
-
+    if body_copy not in result:
+        return result + [body_copy]
+    return result
 
 def get_constants(
     aba_framework,
@@ -663,56 +664,61 @@ def abalearn(prolog) -> ABAFramework:
         ## Generalise via subsumption
         aba_framework = remove_subsumed(prolog, aba_framework, new_rules)
 
-        # Find examples of the target predicate that are covered (both positive and negative)
-        (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
-        neg_top_rules = []
-        for ex in cov_neg_ex:
-            top_rules = find_top_rule(prolog, aba_framework, ex)
-            for rule in top_rules:
-                neg_top_rules.append(rule)
-        aba_framework = get_current_aba_framework(prolog, aba_framework)
-        neg_top_rules = set(neg_top_rules)
-        # Learn exceptions for each top rule of an argument for covered negative examples
-        for rule in neg_top_rules:
-            if rule.head.predicate == target.get_predicate():
-           
-                # Choose which variables to consider
-                idxs = [
-                    0
-                ]  # Currently takes in consideration first atom in the body of the rule
-                # Construct the two sets of constants consts(A+) and consts(A-)
-                (cov_pos_ex, cov_neg_ex) = find_covered_ex(
-                    aba_framework, target
-                )
+        
+        curr_complete = complete(aba_framework, initial_pos_ex)
+        curr_consistent = consistent(aba_framework, initial_neg_ex)
 
-                (a_plus, a_minus) = get_constants(
-                    aba_framework, rule, cov_pos_ex, cov_neg_ex, idxs
-                )
-                if a_plus != [] or a_minus != []:
-                    # Perform assumption introduction via undercutting
-                    aba_framework = assumption_introduction(
-                        prolog, aba_framework, rule, idxs
-                    )
-                    # Add negative and positive examples for the contraries introduced
-                    (a, c_a) = aba_framework.contraries[-1]
-
-                    (eq_a, eq_c) = find_equiv_contrary(
-                        aba_framework, c_a, a_plus, a_minus
+        if not (curr_complete and curr_consistent):
+            # Find examples of the target predicate that are covered (both positive and negative)
+            (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
+            neg_top_rules = []
+            for ex in cov_neg_ex:
+                top_rules = find_top_rule(prolog, aba_framework, ex)
+                for rule in top_rules:
+                    neg_top_rules.append(rule)
+            aba_framework = get_current_aba_framework(prolog, aba_framework)
+            neg_top_rules = set(neg_top_rules)
+            # Learn exceptions for each top rule of an argument for covered negative examples
+            for rule in neg_top_rules:
+                if rule.head.predicate == target.get_predicate():
+            
+                    # Choose which variables to consider
+                    idxs = [
+                        0
+                    ]  # Currently takes in consideration first atom in the body of the rule
+                    # Construct the two sets of constants consts(A+) and consts(A-)
+                    (cov_pos_ex, cov_neg_ex) = find_covered_ex(
+                        aba_framework, target
                     )
 
-                    if eq_a is None:
-                        aba_framework = add_examples(
-                            prolog, aba_framework, c_a.predicate, a_plus, a_minus
+                    (a_plus, a_minus) = get_constants(
+                        aba_framework, rule, cov_pos_ex, cov_neg_ex, idxs
+                    )
+                    if a_plus != [] or a_minus != []:
+                        # Perform assumption introduction via undercutting
+                        aba_framework = assumption_introduction(
+                            prolog, aba_framework, rule, idxs
                         )
-                    else:
-                        aba_framework = replace_equiv_contrary(
-                            prolog,
-                            aba_framework,
-                            a.predicate,
-                            c_a.predicate,
-                            eq_a,
-                            eq_c,
+                        # Add negative and positive examples for the contraries introduced
+                        (a, c_a) = aba_framework.contraries[-1]
+
+                        (eq_a, eq_c) = find_equiv_contrary(
+                            aba_framework, c_a, a_plus, a_minus
                         )
+
+                        if eq_a is None:
+                            aba_framework = add_examples(
+                                prolog, aba_framework, c_a.predicate, a_plus, a_minus
+                            )
+                        else:
+                            aba_framework = replace_equiv_contrary(
+                                prolog,
+                                aba_framework,
+                                a.predicate,
+                                c_a.predicate,
+                                eq_a,
+                                eq_c,
+                            )
         (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
         true_cov_pos_ex = []
         for pos_ex in aba_framework.positive_examples:
