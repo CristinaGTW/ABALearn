@@ -11,5 +11,6 @@ def set_up_abalearn(input_file_path: str) -> Prolog:
 
 
 def reset(prolog: Prolog) -> None:
-    list(prolog.query("restart."))
+    q = list(prolog.query("restart."))
+    del q
     return prolog

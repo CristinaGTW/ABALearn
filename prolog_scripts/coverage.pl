@@ -5,23 +5,23 @@
 
 :- dynamic my_asm/1, contrary/2.
 
-covered([]).
-covered([Ex|RestEx]):- 
-	accepted(Ex),
-        covered(RestEx).
+covered([],[]).
+covered([Ex|RestEx], [RuleId|RestId]):- 
+	accepted(Ex, RuleId),
+        covered(RestEx, RestId).
 
 %%%%%%DEDUCTION FROM WHAT HAS BEEN LEARNT ALREADY (THE CURRENT BACKGROUND)
-accepted(Ex):-
-	argument((Ex,Support)),
+accepted(Ex, RuleId):-
+	argument((Ex,Support), RuleId),
 	grounded((Ex,Support)).
 
 % (C,[C]) is an argument if C is an assumption 
-argument((Asm,[Asm])) :-
+argument((Asm,[Asm]),Asm) :-
 	my_asm(Asm).
 % (C,A) is an argument if there is a rule for C which can be applied,
 % i.e. if the body literals are justified (derivable)
-argument((Conc,Asm)) :-
-	my_rule(_,Conc,Body),
+argument((Conc,Asm), RuleId) :-
+	my_rule(RuleId,Conc,Body),
 	justified(Body,Asm).
 
 % the empty	set of literals is always justified (derivable) by the empty set
@@ -33,12 +33,12 @@ justified([X=X|RestBody], Asm) :-
 % a literal Body1 is justified (derivable) by a set Asm where (Body1,Asm) is
 % an argument
 justified([Body1|RestBody],Asm) :-
-	argument((Body1,Asm1)),
+	argument((Body1,Asm1),_),
 	justified(RestBody,Asm2),
 	ord_union(Asm1,Asm2,Asm).
 
 grounded( A) :-
-  argument( A),
+  argument( A,_),
   forall( attacks( X, A), defendFrom( X, [])).  
 defendFrom( Attacker, OldAttackers) :-
   attacks( Defender, Attacker),
@@ -50,8 +50,8 @@ forall( P, Q) :-
   .
 % first is the contrary of an assumption in the second
 attacks((ConcA,AsmA),(ConcB,AsmB)) :-
-	argument((ConcA,AsmA)),
+	argument((ConcA,AsmA),_),
 	contrary(OneAsm,ConcA),
-	argument((ConcB,AsmB)),
+	argument((ConcB,AsmB),_),
 	member(OneAsm,AsmB).
 

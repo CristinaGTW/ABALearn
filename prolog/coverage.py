@@ -3,20 +3,25 @@ from elements.components import Atom, Example
 
 # Checks if the list of examples is covered
 def covered(prolog, exs: list[Example]) -> bool:
-    exs_str: str = ""
     for ex in exs:
-        exs_str += str(ex.fact) + ","
-    exs_str = exs_str[:-1]
-    query = f"covered([{exs_str}])."
-    result: list[dict] = list(prolog.query(query))
-    return all([res == {} for res in result]) and len(result) > 0
+        exs_str = str(ex.fact)
+        query = f"covered([{exs_str}],[R])."
+        result: list[dict] = list(prolog.query(query))
+        if len(result) == 0:
+            return False
+    return True
 
+def get_top_rule(prolog, atom: Atom):
+    query = f"covered([{atom}],[TopRule])."
+    result: list[dict] = list(prolog.query(query))
+    return [r['TopRule'] for r in result]
 
 # Finds all values sol for which atom.predicate(sol) is covered
 def get_covered_solutions(prolog, atom: Atom) -> list[dict]:
-    query: str = f"covered([{atom}])."
+    query: str = f"covered([{atom}],[Rule])."
     solutions: list[dict] = list(prolog.query(query))
     for sol in solutions:
+        sol.pop('Rule',None)
         for k in sol:
             sol[k] = str(sol[k])
     i = 0

@@ -189,4 +189,6 @@ poetry.toml
 .history
 .ionide
 
+solution.pl
+
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
