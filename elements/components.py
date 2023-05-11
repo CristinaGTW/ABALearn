@@ -208,6 +208,9 @@ class Example:
         return hash(self.example_id)
 
 
+    def __eq__(self, obj):
+        return isinstance(obj, Example) and obj.fact == self.fact
+
 @dataclass
 class Equality:
     var_1: str
