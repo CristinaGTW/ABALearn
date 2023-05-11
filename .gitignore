@@ -172,6 +172,7 @@ poetry.toml
 
 ### VisualStudioCode ###
 .vscode/*
+.vscode/
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -189,6 +190,6 @@ poetry.toml
 .history
 .ionide
 
-solution.pl
-
+*.pl
+*.lprof
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python
