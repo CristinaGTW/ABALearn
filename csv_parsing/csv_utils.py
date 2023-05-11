@@ -1,17 +1,22 @@
-from elements.components import Rule,Atom, Equality
+from elements.components import Rule, Atom, Equality, Example
 
 
-def row_to_rules(row, headers, count) -> tuple[list[Rule],int]:
+def row_to_learning_problem(row, headers, label, count, pos_ex_count, neg_ex_count) -> tuple[list[Rule], int]:
     rules = []
     target = row[0]
-    row = row[1:-1]
-    for i,attr in enumerate(headers[1:-1]):
-        if i != 0:
-            atom = Atom.parse_atom(attr + '_' + row[i] + '(A)')
-        else:
-            atom = Atom.parse_atom(attr + '_' + row[i].split('.')[0] + '(A)')
-        eq = Equality('A',target)
-        rules.append(Rule(f'r{count}', atom, [eq]))      
-        count += 1  
+    for val, attr in zip(row[1:-1], headers[1:-1]):
+        if val == 'yes' or val == '1':
+            rules.append(Rule(f'r{count}', Atom(
+                attr, ['X']), [Equality('X', target)]))
+            count += 1
 
-    return (rules, count)
+    if row[-1] == 'yes':
+        pos_flag = True
+        ex = Example(f"p{pos_ex_count}", Atom(label, [target]))
+        pos_ex_count += 1
+    else:
+        pos_flag = False
+        ex = Example(f"n{neg_ex_count}", Atom(label, [target]))
+        neg_ex_count += 1
+
+    return rules, pos_flag, ex, count, pos_ex_count, neg_ex_count
