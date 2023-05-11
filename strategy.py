@@ -317,7 +317,7 @@ def count_new_vars(new_rule: Rule, rule_1: Rule, rule_2: Rule) -> int:
     return min(len(diff_1), len(diff_2))
 
 
-def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramework:
+def fold_rules(prolog, aba_framework: ABAFramework, predicate: str, arity:int) -> ABAFramework:
     new_rules = []
     rules = aba_framework.background_knowledge
     aba_framework = get_current_aba_framework(prolog, aba_framework)
@@ -333,7 +333,7 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramew
                         prolog, rule_1.rule_id, rule_2.rule_id
                     ) and not check_loop(aba_framework, predicate, rule_2):
                         prev_framework = deepcopy(aba_framework)
-                        (_, prev_neg) = count_covered(prolog, aba_framework)
+                        (_, prev_neg) = count_covered(prolog, aba_framework, predicate, arity)
                         print(f"Folding rule {rule_1} with rule {rule_2}")
                         fold(prolog, rule_1.rule_id, rule_2.rule_id)
                         aba_framework = get_current_aba_framework(prolog, aba_framework)
@@ -390,7 +390,7 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramew
                                 prolog, aba_framework
                             )
                             new_rule = aba_framework.background_knowledge[-1]
-                        (_, curr_neg) = count_covered(prolog, aba_framework)
+                        (_, curr_neg) = count_covered(prolog, aba_framework, predicate, arity)
                         if curr_neg > prev_neg:
                             if introduced_neg:
                                 print(
@@ -630,7 +630,7 @@ def abalearn(prolog) -> ABAFramework:
         if can_fold[target.get_predicate()]:
             # Generalise via folding
             (aba_framework, new_rules) = fold_rules(
-                prolog, aba_framework, target.get_predicate()
+                prolog, aba_framework, target.get_predicate(), target.get_arity()
             )
 
         ## Generalise via subsumption

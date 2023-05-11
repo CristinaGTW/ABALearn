@@ -1,5 +1,5 @@
 from elements.components import Atom, Example
-
+from elements.aba_framework import ABAFramework
 
 # Checks if the list of examples is covered
 def covered(prolog, exs: list[Example]) -> bool:
@@ -34,15 +34,34 @@ def get_covered_solutions(prolog, atom: Atom) -> list[dict]:
         i += 1
     return solutions
 
+def _format_res(result: list):
+    return [r if r[0] != ',' else r.split(',',1)[1] for r in result]
 
-def count_covered(prolog, aba_framework) -> tuple[int, int]:
+
+def count_covered(prolog, aba_framework:ABAFramework, predicate, arity) -> tuple[int, int]:
+    query_atom = f'('
+    for i in range(arity):
+        query_atom += chr(ord('A')+i) + ','
+    query_atom = query_atom[:-1]
+    query_atom += ')'
+    query: str = f"findall({query_atom},covered([{predicate}{query_atom}],Rule), Result)."
+    solutions: list[dict] = list(prolog.query(query))
+    results = [sol['Result'] for sol in solutions]
+    covered = []
+    for result in results:
+        covered.extend([str(r) for r in result])
+    covered = _format_res(covered)
+    covered = set(covered)
     pos_count = 0
-    for pos_ex in aba_framework.positive_examples:
-        if covered(prolog, [pos_ex]):
-            pos_count += 1
     neg_count = 0
-    for neg_ex in aba_framework.negative_examples:
-        if covered(prolog, [neg_ex]):
-            neg_count += 1
+    for cov_ex in covered:
+        if arity > 1:
+            ex = Example("e", Atom.parse_atom(f'{predicate}{cov_ex}'))
+        else:
+            ex = Example("e", Atom.parse_atom(f'{predicate}({cov_ex})'))
+        if ex in aba_framework.positive_examples:
+            pos_count += 1
+        elif ex in aba_framework.negative_examples:
+            neg_count +=1
 
     return (pos_count, neg_count)
