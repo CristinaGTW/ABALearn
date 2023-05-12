@@ -69,12 +69,14 @@ def get_current_aba_framework(prolog, aba_framework) -> ABAFramework:
     if aba_framework is not None:
         con_pos_ex_map: dict[str, list[str]] = aba_framework.con_pos_ex_map
         con_neg_ex_map: dict[str, list[str]] = aba_framework.con_neg_ex_map
+        language = aba_framework.language
         aba_framework: ABAFramework = ABAFramework(
-            rules, pos_exs, neg_exs, assumptions, contraries, con_body_map, con_pos_ex_map, con_neg_ex_map
+            rules, pos_exs, neg_exs, assumptions, contraries, con_body_map, con_pos_ex_map, con_neg_ex_map, language=language
         )
     else: 
         aba_framework: ABAFramework = ABAFramework(
             rules, pos_exs, neg_exs, assumptions, contraries, con_body_map, {}, {}
         )
+        aba_framework.set_language()
 
     return aba_framework

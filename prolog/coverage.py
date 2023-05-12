@@ -1,22 +1,25 @@
 from elements.components import Atom, Example
-from elements.aba_framework import ABAFramework
 import subprocess
-
+import re
 # Checks if the list of examples is covered
-def covered(prolog, exs: list[Example]) -> bool:
+def covered(prolog, aba_framework, exs: list[Example]) -> bool:
+    grounded_extension = aba_framework.get_grounded_extension(prolog)
     for ex in exs:
-        exs_str = str(ex.fact)
-        query = f"covered([{exs_str}],[R])."
-        result: list[dict] = list(prolog.query(query))
-        if len(result) == 0:
+        if not str(ex.fact) in grounded_extension:
             return False
     return True
+        
 
-def get_grounded_extension(prolog, aba_framework:ABAFramework):
+def extract_in_terms(input_string):
+    in_terms = re.findall(r'in\((.*?)\)', input_string)
+    return [term + ')' for term in in_terms]
+
+def make_grounded_extension(prolog, aba_framework):
     input_file = aba_framework.aspartix_input(prolog, "input.af")
     process = subprocess.Popen(f'clingo {input_file} aspartix/ground.dl aspartix/filter.lp 0', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = process.communicate()
-    breakpoint()
+    out, _ = process.communicate()
+    grounded_extension = extract_in_terms(out.decode())
+    return grounded_extension
 
 def get_top_rule(prolog, atom: Atom):
     query = f"covered([{atom}],[TopRule])."
@@ -24,51 +27,33 @@ def get_top_rule(prolog, atom: Atom):
     return [r['TopRule'] for r in result]
 
 # Finds all values sol for which atom.predicate(sol) is covered
-def get_covered_solutions(prolog, atom: Atom) -> list[dict]:
-    query: str = f"covered([{atom}],[Rule])."
-    solutions: list[dict] = list(prolog.query(query))
-    for sol in solutions:
-        sol.pop('Rule',None)
-        for k in sol:
-            sol[k] = str(sol[k])
-    i = 0
-    size = len(solutions)
-    while i < size:
-        temp_sols = solutions[0:i] + solutions[i + 1 :]
-        if i in temp_sols:
-            solutions = temp_sols
-            size -= 1
-        i += 1
+def get_covered_solutions(prolog, aba_framework, atom: Atom) -> list[dict]:
+    grounded_extension = aba_framework.get_grounded_extension(prolog)
+    solutions = []
+    keys = {}
+    for idx,arg in enumerate(atom.arguments):
+        if arg[0].isupper():
+            keys[arg] = idx
+    for at in grounded_extension:
+        [pred,_] = at.split('(',1)
+        if pred == atom.predicate:
+            at_sol = Atom.parse_atom(at)
+            sol_dict = {}
+            for key in keys:
+                sol_dict[key] = at_sol.arguments[keys[key]]
+            solutions.append(sol_dict)
+
+    
     return solutions
 
 def _format_res(result: list):
     return [r if r[0] != ',' else r.split(',',1)[1] for r in result]
 
 
-def count_covered(prolog, aba_framework:ABAFramework, predicate, arity) -> tuple[int, int]:
-    query_atom = f'('
-    for i in range(arity):
-        query_atom += chr(ord('A')+i) + ','
-    query_atom = query_atom[:-1]
-    query_atom += ')'
-    query: str = f"findall({query_atom},covered([{predicate}{query_atom}],Rule), Result)."
-    solutions: list[dict] = list(prolog.query(query))
-    results = [sol['Result'] for sol in solutions]
-    covered = []
-    for result in results:
-        covered.extend([str(r) for r in result])
-    covered = _format_res(covered)
-    covered = set(covered)
-    pos_count = 0
+def count_neg_covered(prolog, aba_framework, predicate) -> tuple[int, int]:
+    grounded_extension = aba_framework.get_grounded_extension(prolog)
     neg_count = 0
-    for cov_ex in covered:
-        if arity > 1:
-            ex = Example("e", Atom.parse_atom(f'{predicate}{cov_ex}'))
-        else:
-            ex = Example("e", Atom.parse_atom(f'{predicate}({cov_ex})'))
-        if ex in aba_framework.positive_examples:
-            pos_count += 1
-        elif ex in aba_framework.negative_examples:
-            neg_count +=1
-
-    return (pos_count, neg_count)
+    for ex in aba_framework.negative_examples:
+        if ex.get_predicate() == predicate and str(ex.fact) in grounded_extension:
+            neg_count+=1
+    return neg_count
