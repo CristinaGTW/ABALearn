@@ -1,6 +1,5 @@
-from dataclasses import dataclass, field
-from elements.components import Rule, Example, Atom, Equality
-
+from dataclasses import dataclass
+from elements.components import Rule, Example, Atom
 
 @dataclass
 class ABAFramework:
@@ -14,8 +13,8 @@ class ABAFramework:
     con_neg_ex_map: dict[str, list[str]]
 
     def create_file(self, filename: str):
-        f = open(filename, "w")
         content = self.get_content()
+        f = open(filename, "w")
         f.write(content)
         f.close()
 
@@ -41,3 +40,45 @@ class ABAFramework:
             content += contrary[0].to_prolog_contrary(contrary[1]) + "\n"
 
         return content
+
+    def aspartix_input(self,prolog,filename):
+        input = ''
+        query: str = f"findall(arg(A,B),argument((A,B),Rule), Result)."
+        solutions: list[dict] = list(prolog.query(query))
+        for sol in solutions:
+            for arg in sol['Result']:
+                conc = str(arg.args[0])
+                support = [str(a) for a in arg.args[1]]
+                support_str = '['
+                for s in support:
+                    support_str += s +','
+                if len(support_str)>1:
+                    support_str = support_str[:-1]
+                support_str += ']'    
+                input += 'arg(' + conc + ',' + support_str + '). \n'
+
+        query: str = f"findall(att(A,B),attacks(A,B), Result)."
+        solutions: list[dict] = list(prolog.query(query))
+        for sol in solutions:
+            for att in sol['Result']:
+                concA = str(att.args[0].args[0])
+                supportA = [str(a) for a in att.args[0].args[1]]
+                supportA_str = '['
+                for s in supportA:
+                    supportA_str += s +','
+                if len(supportA_str) > 1:
+                    supportA_str = supportA_str[:-1]
+                supportA_str += ']'    
+                concB = str(att.args[1].args[0])
+                supportB = [str(a) for a in att.args[1].args[1]]
+                supportB_str = '['
+                for s in supportB:
+                    supportB_str += s +','
+                if len(supportB_str) > 1:
+                    supportB_str = supportB_str[:-1]
+                supportB_str += ']'    
+                input += 'att((' + concA + ',' + supportA_str +'),('+ concB +',' + supportB_str +')). \n'
+        f = open(filename, "w")
+        f.write(input)
+        f.close()
+        
