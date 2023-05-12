@@ -1,5 +1,6 @@
 from elements.components import Atom, Example
 from elements.aba_framework import ABAFramework
+import subprocess
 
 # Checks if the list of examples is covered
 def covered(prolog, exs: list[Example]) -> bool:
@@ -10,6 +11,12 @@ def covered(prolog, exs: list[Example]) -> bool:
         if len(result) == 0:
             return False
     return True
+
+def get_grounded_extension(prolog, aba_framework:ABAFramework):
+    input_file = aba_framework.aspartix_input(prolog, "input.af")
+    process = subprocess.Popen(f'clingo {input_file} aspartix/ground.dl aspartix/filter.lp 0', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = process.communicate()
+    breakpoint()
 
 def get_top_rule(prolog, atom: Atom):
     query = f"covered([{atom}],[TopRule])."

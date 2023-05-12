@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from elements.components import Rule, Example, Atom
-
+import re
 @dataclass
 class ABAFramework:
     background_knowledge: list[Rule]
@@ -40,45 +40,56 @@ class ABAFramework:
             content += contrary[0].to_prolog_contrary(contrary[1]) + "\n"
 
         return content
+    
+
+    
+    def _from_prolog_output(self,s: str):
+        predicate, arguments_str = s[:-1].split("(", 1)
+        arguments = arguments_str.split(",")
+        count = 0
+        var_dict = {}
+        arguments = [arg.strip() for arg in arguments]
+        for idx, arg in enumerate(arguments):
+            if "$VAR(" in arg:
+                n = int(arg[arg.find("$") + 5 : -1])
+                var = chr(ord("A") + n)
+                arguments[idx] = var
+            if arg[0] == "_":
+                if arg in var_dict:
+                    var = var_dict[arg]
+                else:
+                    var = chr(ord("A") + count)
+                    var_dict[arg] = var
+                    count += 1
+                arguments[idx] = var
+        arguments = [arg.strip() for arg in arguments]
+        normalised = predicate + '('
+        for arg in arguments:
+            normalised += arg +','
+        normalised = normalised[:-1]
+        normalised += ')'
+        return normalised
 
     def aspartix_input(self,prolog,filename):
         input = ''
-        query: str = f"findall(arg(A,B),argument((A,B),Rule), Result)."
+        query: str = f"findall(A,argument((A,B),Rule), Result)."
         solutions: list[dict] = list(prolog.query(query))
         for sol in solutions:
             for arg in sol['Result']:
-                conc = str(arg.args[0])
-                support = [str(a) for a in arg.args[1]]
-                support_str = '['
-                for s in support:
-                    support_str += s +','
-                if len(support_str)>1:
-                    support_str = support_str[:-1]
-                support_str += ']'    
-                input += 'arg(' + conc + ',' + support_str + '). \n'
+                conc = self._from_prolog_output(str(arg))
+                input += 'arg(' + conc + '). \n'
 
-        query: str = f"findall(att(A,B),attacks(A,B), Result)."
+        query: str = f"findall((A,B),attacks((A,A2),(B,B2)), Result)."
         solutions: list[dict] = list(prolog.query(query))
         for sol in solutions:
             for att in sol['Result']:
-                concA = str(att.args[0].args[0])
-                supportA = [str(a) for a in att.args[0].args[1]]
-                supportA_str = '['
-                for s in supportA:
-                    supportA_str += s +','
-                if len(supportA_str) > 1:
-                    supportA_str = supportA_str[:-1]
-                supportA_str += ']'    
-                concB = str(att.args[1].args[0])
-                supportB = [str(a) for a in att.args[1].args[1]]
-                supportB_str = '['
-                for s in supportB:
-                    supportB_str += s +','
-                if len(supportB_str) > 1:
-                    supportB_str = supportB_str[:-1]
-                supportB_str += ']'    
-                input += 'att((' + concA + ',' + supportA_str +'),('+ concB +',' + supportB_str +')). \n'
+                att = str(att)[2:-1]
+                [att1,att2] = re.split(r',\s*(?=[a-zA-Z])', att)
+                att1 =  self._from_prolog_output(att1)
+                att2 =  self._from_prolog_output(att2)
+                input += 'att(' + att1 + ',' + att2+ '). \n'
         f = open(filename, "w")
         f.write(input)
         f.close()
+        return filename
         
