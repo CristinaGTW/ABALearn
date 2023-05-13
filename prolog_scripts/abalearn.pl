@@ -96,7 +96,7 @@ fold(R1,R2) :-
 %%%%% CHECKS IF RULES ARE FOLDABLE
 foldable(R1,R2,Subconj) :-
    R1\=R2,                
-   my_rule(R1,H,Bd1),
+   my_rule(R1,_,Bd1),
    my_rule(R2,K,Bd2),    
    term_variables(K,VK),
    hdequalities(VK,Bd2,Eqs2,Eqs1B1),
