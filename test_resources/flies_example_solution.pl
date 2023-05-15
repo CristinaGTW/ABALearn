@@ -8,8 +8,8 @@ my_rule(r6,penguin(A),[A=d]).
 my_rule(r7,superpenguin(A),[A=e]).
 my_rule(r8,superpenguin(A),[A=f]).
 my_rule(r_13,flies(A),[bird(A),alpha1(A)]).
-my_rule(r_20,c_alpha1(A),[penguin(A),alpha2(A)]).
-my_rule(r_23,c_alpha2(A),[superpenguin(A)]).
+my_rule(r_22,c_alpha1(A),[penguin(A),alpha2(A)]).
+my_rule(r_27,c_alpha2(A),[superpenguin(A)]).
 
 % Positive Examples 
 

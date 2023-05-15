@@ -4,9 +4,9 @@ from elements.components import Rule, Example, Atom, Equality
 
 @dataclass
 class ABAFramework:
-    background_knowledge: list[Rule]
-    positive_examples: list[Example]
-    negative_examples: list[Example]
+    background_knowledge: dict[str,Rule]
+    positive_examples: dict[str,Example]
+    negative_examples: dict[str,Example]
     assumptions: list[Atom]
     contraries: list[tuple[Atom, Atom]]
     con_body_map: dict[str, list[str]]
@@ -21,15 +21,15 @@ class ABAFramework:
 
     def get_content(self) -> str:
         content = "% Background Knowledge \n"
-        for rule in self.background_knowledge:
+        for rule in self.background_knowledge.values():
             content += rule.to_prolog() + "\n"
 
         content += "\n% Positive Examples \n"
-        for pos_ex in self.positive_examples:
+        for pos_ex in self.positive_examples.values():
             content += pos_ex.to_prolog_pos() + "\n"
 
         content += "\n% Negative Examples \n"
-        for neg_ex in self.negative_examples:
+        for neg_ex in self.negative_examples.values():
             content += neg_ex.to_prolog_neg() + "\n"
 
         content += "\n% Assumptions \n"

@@ -192,4 +192,5 @@ poetry.toml
 
 *.pl
 *.lprof
+*.af
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python

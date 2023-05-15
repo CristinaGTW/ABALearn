@@ -59,9 +59,9 @@ def count_covered(prolog, aba_framework:ABAFramework, predicate, arity) -> tuple
             ex = Example("e", Atom.parse_atom(f'{predicate}{cov_ex}'))
         else:
             ex = Example("e", Atom.parse_atom(f'{predicate}({cov_ex})'))
-        if ex in aba_framework.positive_examples:
+        if ex in aba_framework.positive_examples.values():
             pos_count += 1
-        elif ex in aba_framework.negative_examples:
+        elif ex in aba_framework.negative_examples.values():
             neg_count +=1
 
     return (pos_count, neg_count)

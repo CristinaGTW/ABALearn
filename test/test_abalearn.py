@@ -10,7 +10,7 @@ def test_get_rules():
     rules = get_rules(prolog)
 
     assert len(rules) == 8
-    assert rules[0] == Rule("r1", Atom("bird", ["A"]), [Atom("penguin", ["A"])])
+    assert rules['r1'] == Rule("r1", Atom("bird", ["A"]), [Atom("penguin", ["A"])])
 
 
 def test_get_positive_examples():
@@ -18,7 +18,7 @@ def test_get_positive_examples():
     pos_exs = get_positive_examples(prolog)
 
     assert len(pos_exs) == 4
-    assert pos_exs[0] == Example("p1", Atom("flies", ["a"]))
+    assert pos_exs['p1'] == Example("p1", Atom("flies", ["a"]))
 
 
 def test_prolog_can_be_modified():

@@ -29,22 +29,22 @@ where A and C are atoms.
 
 % rote_learn positive example N
 
-rote_learn(N) :- 
+rote_learn(N,(R,Head,Eqs)) :- 
    pos(N,A),  
    A=..[Pred|Ts], 
    eq_zip(Xs,Ts,Eqs),
    Head =..[Pred|Xs], 
    gensym(r_,R),
-   assert(my_rule(R,Head,Eqs)).
+   assert(my_rule(R,Head,Eqs)),
+   numbervars((Head,Eqs)).
 
 % rote_learn all positive examples
 
-rote_learn_all(Pred/Arity) :- 
+rote_learn_all(Pred/Arity,(R,H,B)) :- 
    pos(N,A), 
    functor(A,Pred,Arity),
-   rote_learn(N),
-   fail. 
-rote_learn_all(_Pred).
+   rote_learn(N,(R,H,B)).
+% rote_learn_all(_Pred,(_R,_H,_B)).
 
 % zip two lists into a list of equalities
 
@@ -54,12 +54,13 @@ eq_zip([X|Xs],[T|Ts],[X=T|Eqs]) :-
 
 %%%%% REMOVE EQUALITIES %%%%%%
 
-removeq(R,EqPos) :-
+removeq(R,EqPos,(R1,H,B1)) :-
    my_rule(R,H,B),
    nth1(EqPos,B,Eq,B1),
    Eq=(_=_),
    gensym(r_,R1),
-   replace(my_rule(R,H,B),my_rule(R1,H,B1)).
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
+   numbervars((H,B1)).
 
 replace(P1,P2) :-
    retract(P1),
@@ -67,18 +68,19 @@ replace(P1,P2) :-
 
 %%%%% GENERALISE EQUALITIES %%%%%%
 
-geneqs(R) :-
+geneqs(R, H, B, (R1,B1)) :-
    my_rule(R,H,B),
    subsumes_chk_conj([X=T,Y=U],B,Subconj,Rest),
    Subconj=[X=T,Y=U],
    T==U,
    B1=[X=Y|Rest], 
    gensym(r_,R1),
-   replace(my_rule(R,H,B),my_rule(R1,H,B1)).
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
+   numbervars((H,B1)).
 
 
 %%%%% FOLDING %%%%%%
-fold(R1,R2) :-
+fold(R1,R2, (R3,H,B3)) :-
    R1\=R2,                    
    my_rule(R1,H,Bd1),
    my_rule(R2,K,Bd2),
@@ -91,7 +93,8 @@ fold(R1,R2) :-
    append(REqs2,[K],NewB),
    append(NewB,Rest,B3),
    gensym(r_,R3),
-   replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)).
+   replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)),
+   numbervars((H,B3)).
 
 %%%%% CHECKS IF RULES ARE FOLDABLE
 foldable(R1,R2,Subconj) :-
@@ -132,7 +135,7 @@ add_rule(H,B) :-
 
 %%%% ASSUMPTION INTRODUCTION via undercutting %%%%%
 
-undercut(R,AtomPos) :-
+undercut(R,AtomPos,(R1,H,B1,Asm,CAsm,B)) :-
    my_rule(R,H,B),
    atoms(AtomPos,B,As),
    term_variables(As,Vs),
@@ -156,8 +159,8 @@ atoms([N|Ns],B,[A|As]) :-
 
 % Add/Remove examples
 
-add_pos(A) :- gensym(p_,N), assert(pos(N,A)).
-add_neg(A) :- gensym(n_,N), assert(neg(N,A)).
+add_pos(A,N) :- gensym(p_,N), assert(pos(N,A)).
+add_neg(A,N) :- gensym(n_,N), assert(neg(N,A)).
 rem_pos(N) :- retract(pos(N,_A)).
 rem_neg(N) :- retract(neg(N,_A)).
 
