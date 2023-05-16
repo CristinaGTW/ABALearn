@@ -1,5 +1,5 @@
 from elements.components import Atom, Rule
-
+from prolog.coverage import update_covered
 def rote_learn(prolog, example_id):
     query = f"rote_learn({example_id})."
     q = list(prolog.query(query))
@@ -34,11 +34,13 @@ def remove_eq(prolog, aba_framework, rule_id, eq_pos):
     new_rule = Rule.parse_rule(rule_str)
     aba_framework.background_knowledge.pop(rule_id)
     aba_framework.background_knowledge[new_rule_id] = new_rule
+    aba_framework.adjust_arguments(rule_id)
+    update_covered(prolog, aba_framework, new_rule_id)
     
     return new_rule
 
 
-def fold(prolog, aba_framework,rule_id_1, rule_id_2) -> Rule:
+def fold(prolog, aba_framework,rule_id_1, rule_id_2, update = True) -> Rule:
     query = f"fold({rule_id_1},{rule_id_2},(R,H,B))."
     result = list(prolog.query(query))[0]
     body = ""
@@ -50,6 +52,9 @@ def fold(prolog, aba_framework,rule_id_1, rule_id_2) -> Rule:
     new_rule = Rule.parse_rule(rule_str)
     aba_framework.background_knowledge[rule_id] = new_rule
     aba_framework.background_knowledge.pop(rule_id_1)
+    if update:
+        aba_framework.adjust_arguments(rule_id_1)
+        update_covered(prolog, aba_framework, rule_id)
     return new_rule
 
 
@@ -76,6 +81,8 @@ def undercut(prolog, aba_framework, rule_id, atom_pos):
     aba_framework.assumptions.append(asm)
     aba_framework.contraries.append((asm,con))
     aba_framework.con_body_map[con.predicate] = [Atom.parse_atom(str(b)).predicate for b in result['B']]
+    aba_framework.adjust_arguments(rule_id)
+    update_covered(prolog, aba_framework, new_rule_id)
 
 
 def gen_eqs(prolog, aba_framework, rule_id):
@@ -92,3 +99,5 @@ def gen_eqs(prolog, aba_framework, rule_id):
         new_rule = Rule.parse_rule(rule_str)
         aba_framework.background_knowledge.pop(rule_id)
         aba_framework.background_knowledge[new_rule_id] = new_rule
+        return new_rule
+    return None

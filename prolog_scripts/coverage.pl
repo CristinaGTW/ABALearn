@@ -5,36 +5,34 @@
 
 :- dynamic my_asm/1, contrary/2.
 
-covered([],[]).
-covered([Ex|RestEx], [RuleId|RestId]):- 
-	accepted(Ex, RuleId),
-        covered(RestEx, RestId).
 
 %%%%%%DEDUCTION FROM WHAT HAS BEEN LEARNT ALREADY (THE CURRENT BACKGROUND)
-accepted(Ex, RuleId):-
-	argument((Ex,Support), RuleId),
-	grounded((Ex,Support)).
+accepted(Ex, Rules, Support):-
+	argument((Ex,Support), Rules),
+	grounded((Ex,Support)),
+	numbervars((Ex,Support)).
 
 % (C,[C]) is an argument if C is an assumption 
-argument((Asm,[Asm]),Asm) :-
+argument((Asm,[Asm]),[]) :-
 	my_asm(Asm).
 % (C,A) is an argument if there is a rule for C which can be applied,
 % i.e. if the body literals are justified (derivable)
-argument((Conc,Asm), RuleId) :-
+argument((Conc,Asm), [RuleId|Rules]) :-
 	my_rule(RuleId,Conc,Body),
-	justified(Body,Asm).
+	justified(Body,Asm,Rules).
 
 % the empty	set of literals is always justified (derivable) by the empty set
-justified([],[]).
+justified([],[],[]).
 
-justified([X=X|RestBody], Asm) :-
-	justified(RestBody,Asm).
+justified([X=X|RestBody], Asm, Rules) :-
+	justified(RestBody,Asm,Rules).
 
 % a literal Body1 is justified (derivable) by a set Asm where (Body1,Asm) is
 % an argument
-justified([Body1|RestBody],Asm) :-
-	argument((Body1,Asm1),_),
-	justified(RestBody,Asm2),
+justified([Body1|RestBody],Asm, Rules) :-
+	argument((Body1,Asm1),Rules1),
+	justified(RestBody,Asm2,Rules2),
+	append(Rules1,Rules2,Rules),
 	ord_union(Asm1,Asm2,Asm).
 
 grounded( A) :-

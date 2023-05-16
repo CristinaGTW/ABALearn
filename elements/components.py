@@ -37,6 +37,39 @@ class Atom:
         args_str = args_str[:-1]
         return self.predicate + "(" + args_str + ")"
 
+    def correct_grounding(self, atom_str):
+        atom = Atom.parse_atom(atom_str)
+        res = {}
+        atom_map = {}
+        if self.predicate == atom.predicate:
+            for arg1,arg2 in zip(self.arguments, atom.arguments):
+                if not arg1[0].isupper() and not arg2[0].isupper():
+                    if arg1 != arg2:
+                        return False, {}
+                elif arg1[0].isupper() and not arg2[0].isupper():
+                    if arg1 in res:
+                        if not res[arg1] == arg2:
+                            return False,{}
+                    else:
+                        res[arg1] = arg2  
+                elif not arg1[0].isupper() and arg2[0].isupper():
+                    if arg2 in atom_map:
+                        if not arg1 == atom_map[arg2]:
+                            return False,{}
+                    else:
+                        atom_map[arg2] = arg1
+                elif arg1[0].isupper() and arg2[0].isupper():
+                    if arg1 in res and arg2 in atom_map:
+                        if res[arg1] != atom_map[arg2]:
+                            return False,{}
+                    elif arg1 in res:
+                        atom_map[arg2] = res[arg1]
+                    elif arg2 in atom_map:
+                        res[arg1] = atom_map[arg2]
+            return True,res
+        return False,{}
+
+                    
     def to_prolog_asm(self) -> str:
         return f"my_asm({self})."
 

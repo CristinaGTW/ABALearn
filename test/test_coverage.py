@@ -1,40 +1,42 @@
 from prolog.coverage import covered, get_covered_solutions
 from elements.components import Atom, Example
-from prolog.config import set_up_abalearn
-
+from pyswip import Prolog
+from prolog.config import set_up_abalearn, reset
+from prolog.info import set_up_aba_framework
 
 def test_covers():
+    prolog = Prolog()
+    prolog.consult("prolog_scripts/abalearn.pl")
+    reset(prolog)
     prolog = set_up_abalearn("test_resources/flies_example.pl")
-
-    result = covered(
-        prolog,
-        [
-            Example("e1", Atom.parse_atom("bird(a)")),
-            Example("e2", Atom.parse_atom("bird(f)")),
-        ],
-    )
-
-    assert result == True
+    aba_framework = set_up_aba_framework(prolog)
+    result_1 = covered(
+        aba_framework,Atom.parse_atom("bird(a)"))
+    result_2 = covered(aba_framework, Atom.parse_atom("bird(f)"))
+    assert result_1 == True
+    assert result_2 == True
 
 
 def test_not_covers():
+    prolog = Prolog()
+    prolog.consult("prolog_scripts/abalearn.pl")
+    reset(prolog)
     prolog = set_up_abalearn("test_resources/flies_example.pl")
-
-    result = covered(
-        prolog,
-        [
-            Example("p1", Atom.parse_atom("flies(a)")),
-            Example("p2", Atom.parse_atom("flies(b)")),
-        ],
-    )
-
-    assert result == False
+    aba_framework = set_up_aba_framework(prolog)
+    result_1 = covered(aba_framework,Atom.parse_atom("flies(a)"))
+    result_2 = covered(aba_framework,Atom.parse_atom("flies(b)"))
+    assert result_1 == False
+    assert result_2 == False
 
 
 def test_get_covered_solutions():
+    prolog = Prolog()
+    prolog.consult("prolog_scripts/abalearn.pl")
+    reset(prolog)
     prolog = set_up_abalearn("test_resources/flies_example.pl")
+    aba_framework = set_up_aba_framework(prolog)
 
-    result = get_covered_solutions(prolog, Atom("bird", ["X"]))
+    result = get_covered_solutions(aba_framework, Atom("bird", ["X"]))
 
     assert result == [
         {"X": "e"},
