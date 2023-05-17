@@ -82,8 +82,9 @@ def further_generalisation(
                     ) and not check_loop(aba_framework, predicate, rule_2):
                         prev_framework = deepcopy(aba_framework)
                         print(f"Folding rule {rule_1} with rule {rule_2}")
-                        new_rule = fold(prolog, aba_framework, rule_1.rule_id, rule_2.rule_id, update=False)
-                        
+                        new_rule = fold(
+                            prolog, aba_framework, rule_1.rule_id, rule_2.rule_id, update=False)
+
                         if new_rule.has_constants():
                             new_rule = unfold_and_replace(prolog, new_rule)
 
@@ -96,7 +97,8 @@ def further_generalisation(
                                     print(
                                         f"Removing equality at position {i+1} from rule {new_rule}"
                                     )
-                                    new_rule = remove_eq(prolog, aba_framework, new_rule.rule_id, i + 1)
+                                    new_rule = remove_eq(
+                                        prolog, aba_framework, new_rule.rule_id, i + 1)
                                     break
 
                         if (
@@ -150,8 +152,8 @@ def remove_subsumed(
                 for accepted in removed_arguments:
                     if accepted not in aba_framework.arguments:
                         aba_framework.arguments[accepted] = []
-                    aba_framework.arguments[accepted].extend(removed_arguments[accepted])
-
+                    aba_framework.arguments[accepted].extend(
+                        removed_arguments[accepted])
 
 
 def find_justified_groundings(
@@ -287,8 +289,9 @@ def generate_rules(prolog, aba_framework, ex: Example) -> ABAFramework:
     print(
         f'Applying "Rote Learning" to build rules for the predicate {ex.get_predicate()}.'
     )
-    new_rules = rote_learn_all(prolog, aba_framework, ex.get_predicate(), ex.get_arity())
-    new_rules,_ = keep_unique_rules(prolog, aba_framework, new_rules)
+    new_rules = rote_learn_all(
+        prolog, aba_framework, ex.get_predicate(), ex.get_arity())
+    new_rules, _ = keep_unique_rules(prolog, aba_framework, new_rules)
     # Generalise equalities if possible
     for rule in new_rules:
         new_rule = gen_eqs(prolog, aba_framework, rule.rule_id)
@@ -357,7 +360,8 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str, arity: int) 
                         prev_neg = count_neg_covered(
                             aba_framework, predicate)
                         print(f"Folding rule {rule_1} with rule {rule_2}")
-                        new_rule = fold(prolog, aba_framework, rule_1_id, rule_2_id)
+                        new_rule = fold(prolog, aba_framework,
+                                        rule_1_id, rule_2_id)
                         if new_rule.has_constants():
                             new_rule = unfold_and_replace(prolog, new_rule)
                         eqs_count = len(new_rule.get_equalities())
@@ -380,7 +384,7 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str, arity: int) 
                                             f"Folding rule {new_rule} with rule {rule_3}"
                                         )
                                         new_rule_2 = fold(prolog, aba_framework, new_rule.rule_id,
-                                             rule_3_id)
+                                                          rule_3_id)
                                         if len(new_rule_2.get_equalities()) > 0:
                                             print(
                                                 "Undoing previous fold as it wasn't optimal."
@@ -402,7 +406,8 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str, arity: int) 
                                     print(
                                         f"Removing equality at position {i+1} from rule {new_rule}"
                                     )
-                                    new_rule = remove_eq(prolog, aba_framework, new_rule.rule_id, i + 1)
+                                    new_rule = remove_eq(
+                                        prolog, aba_framework, new_rule.rule_id, i + 1)
                                     break
                         curr_neg = count_neg_covered(
                             aba_framework, predicate)
@@ -430,20 +435,21 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str, arity: int) 
                         if not undone:
                             new_rules += [new_rule]
                             rule_1_folded = True
-                            
-    
+
         rules = deepcopy(aba_framework.background_knowledge)
         new_vars_allowed += 1
-    new_rules, removed_rules = keep_unique_rules(prolog, aba_framework, new_rules)
+    new_rules, removed_rules = keep_unique_rules(
+        prolog, aba_framework, new_rules)
     for rule in removed_rules:
         aba_framework.adjust_arguments(rule)
 
-    return aba_framework,new_rules
+    return aba_framework, new_rules
 
 
 def assumption_introduction(prolog, aba_framework, rule, atom_pos) -> ABAFramework:
     print(f"Performing assumption introduction on rule {rule}")
-    undercut(prolog, aba_framework, rule.rule_id, [pos + 1 for pos in atom_pos])
+    undercut(prolog, aba_framework, rule.rule_id,
+             [pos + 1 for pos in atom_pos])
 
 
 def remove_examples(prolog, aba_framework, pos_exs, neg_exs) -> ABAFramework:
@@ -462,7 +468,7 @@ def add_examples(
 ) -> ABAFramework:
     for consts in neg_consts:
         ex: Atom = Atom(predicate, consts)
-        add_pos_ex(prolog, aba_framework,ex)
+        add_pos_ex(prolog, aba_framework, ex)
     con_pos_ex = aba_framework.con_pos_ex_map.get(predicate, [])
     con_pos_ex += neg_consts
     con_pos_ex.sort()
@@ -524,12 +530,12 @@ def replace_equiv_contrary(
                     if b.predicate == a:
                         aba_framework.background_knowledge[rule_id].body[i].predicate = eq_a
 
-    aba_framework.contraries = filter(
+    aba_framework.contraries = list(filter(
         lambda c: c[1].predicate != c_a, aba_framework.contraries
-    )
-    aba_framework.assumptions = filter(
+    ))
+    aba_framework.assumptions = list(filter(
         lambda x: x.predicate != a, aba_framework.assumptions
-    )
+    ))
     set_framework(prolog, aba_framework)
 
 
@@ -582,8 +588,10 @@ def ensure_has_initial_pos_ex(
 
 def abalearn(prolog) -> ABAFramework:
     aba_framework: ABAFramework = set_up_aba_framework(prolog)
-    initial_pos_ex: list[Example] = list(aba_framework.positive_examples.values())
-    initial_neg_ex: list[Example] = list(aba_framework.negative_examples.values())
+    initial_pos_ex: list[Example] = list(
+        aba_framework.positive_examples.values())
+    initial_neg_ex: list[Example] = list(
+        aba_framework.negative_examples.values())
     learned = []
     count = 0
     prev_removed = []
@@ -649,7 +657,8 @@ def abalearn(prolog) -> ABAFramework:
                 prolog, aba_framework, target.get_predicate(), target.get_arity()
             )
         # Generalise via subsumption
-        remove_subsumed(prolog, aba_framework, new_rules,target.get_predicate())
+        remove_subsumed(prolog, aba_framework, new_rules,
+                        target.get_predicate())
         # Find examples of the target predicate that are covered (both positive and negative)
         (cov_pos_ex, cov_neg_ex) = find_covered_ex(
             aba_framework, target)
@@ -717,6 +726,8 @@ def abalearn(prolog) -> ABAFramework:
             if safe:
                 true_cov_pos_ex.append(pos_ex)
         prev_removed = [ex.fact for ex in true_cov_pos_ex]
+        prev_removed = list(filter(lambda at: at.predicate ==
+                            initial_goal.get_predicate(), prev_removed))
         not_cov_neg_ex = []
         for neg_ex in aba_framework.negative_examples.values():
             if not covered(aba_framework, neg_ex.fact):

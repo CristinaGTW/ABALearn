@@ -12,5 +12,9 @@ my_rule(r_9,c_alpha1(A),[republican(A),alpha2(A)]).
 % Negative Examples 
 
 % Assumptions 
+my_asm(alpha1(A)).
+my_asm(alpha2(A)).
 
 % Contraries 
+contrary(alpha1(A),c_alpha1(A)).
+contrary(alpha2(A),c_alpha2(A)).
