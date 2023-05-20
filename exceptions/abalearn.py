@@ -3,3 +3,7 @@ class TopRuleNotFoundException(Exception):
 
 class InvalidRuleBodyException(Exception):
     pass
+
+class CredulousSemanticsException(Exception):
+    print("Goal achieved under credulous semantics!")
+    pass

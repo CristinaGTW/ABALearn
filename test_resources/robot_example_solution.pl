@@ -8,7 +8,7 @@ my_rule(r6,step(A,B),[A=5,B=2]).
 my_rule(r7,busy(A),[A=3]).
 my_rule(r8,busy(A),[A=6]).
 my_rule(r_41,free(A),[step(A,B),alpha1(A,B)]).
-my_rule(r_46,c_alpha1(A,B),[busy(B)]).
+my_rule(r_47,c_alpha1(A,B),[busy(A)]).
 
 % Positive Examples 
 

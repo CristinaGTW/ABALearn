@@ -21,12 +21,13 @@ from prolog.coverage import (
     count_neg_covered,
     get_covered_solutions,
     get_top_rule,
+    get_covered_groundings,
     update_covered,
     covered,
 )
 from elements.aba_framework import ABAFramework
 from elements.components import Atom, Equality, Example, Rule
-from exceptions.abalearn import InvalidRuleBodyException
+from exceptions.abalearn import InvalidRuleBodyException, CredulousSemanticsException
 import sys
 from copy import deepcopy
 
@@ -43,6 +44,41 @@ def complete(aba_framework, pos_exs: list[Example]) -> bool:
 
 def consistent(aba_framework, neg_exs: list[Example]) -> bool:
     return not any([covered(aba_framework, neg_ex.fact) for neg_ex in neg_exs])
+
+
+def remove_redundant_assumptions(prolog, aba_framework: ABAFramework):
+    to_remove = []
+    for a, c_a in aba_framework.contraries:
+        req = False
+        for rule_id in aba_framework.background_knowledge:
+            if (
+                aba_framework.background_knowledge[rule_id].head.predicate
+                == c_a.predicate
+            ):
+                req = True
+                break
+        if not req:
+            to_remove.append(a.predicate)
+    for rule_id in aba_framework.background_knowledge:
+        rule = aba_framework.background_knowledge[rule_id]
+        initial_body = rule.body
+        new_body = list(
+            filter(
+                lambda b: isinstance(b, Equality)
+                or (isinstance(b, Atom) and b.predicate not in to_remove),
+                initial_body,
+            )
+        )
+        rule.body = new_body
+        aba_framework.background_knowledge[rule_id] = rule
+    aba_framework.assumptions = list(
+        filter(lambda a: a.predicate not in to_remove, aba_framework.assumptions)
+    )
+    aba_framework.contraries = list(
+        filter(lambda a: a[0].predicate not in to_remove, aba_framework.contraries)
+    )
+
+    set_framework(prolog, aba_framework)
 
 
 def get_stats(aba_framework, pos_exs: list[Example], neg_exs: list[Example]):
@@ -222,7 +258,7 @@ def find_justified_groundings(
                     )
         if isinstance(b, Equality):
             if b.var_1 in curr_groundings.keys():
-                if b.var_2[0].islower() or b.var_2[0].isdigit():
+                if not b.var_2[0].isupper():
                     assert curr_groundings[b.var_1] == b.var_2
                 else:
                     if b.var_2 in curr_groundings.keys():
@@ -232,7 +268,7 @@ def find_justified_groundings(
             else:
                 if b.var_2 in sol.keys():
                     curr_groundings[b.var_1] = curr_groundings[b.var_2]
-                elif b.var_2[0].islower() or b.var_2[0].isdigit():
+                elif not b.var_2[0].isupper():
                     curr_groundings[b.var_1] = b.var_2
                 else:
                     raise InvalidRuleBodyException(
@@ -256,18 +292,20 @@ def get_constants(
 ) -> tuple[list[list[str]], list[list[str]]]:
     pos_ex_consts = []
     neg_ex_consts = []
-    head_sol: list[dict] = get_covered_solutions(aba_framework, top_rule.head)
+    head_sol: list[tuple(Atom, dict)] = get_covered_groundings(
+        aba_framework, top_rule.head
+    )
     pos_ex_sols: list[dict] = []
     neg_ex_sols: list[dict] = []
 
-    for sol in head_sol:
+    for sol_atom, sol in head_sol:
         if (
-            list(sol.values()) in [ex.get_arguments() for ex in cov_pos_ex]
+            any([ex.fact.correct_grounding(str(sol_atom))[0] for ex in cov_pos_ex])
             and sol not in pos_ex_sols
         ):
             pos_ex_sols.append(sol)
         if (
-            list(sol.values()) in [ex.get_arguments() for ex in cov_neg_ex]
+            any([ex.fact.correct_grounding(str(sol_atom))[0] for ex in cov_neg_ex])
             and sol not in neg_ex_sols
         ):
             neg_ex_sols.append(sol)
@@ -611,7 +649,7 @@ def ensure_has_initial_neg_ex(
             if neg_ex.fact not in [
                 ex.fact for ex in list(aba_framework.negative_examples.values())
             ]:
-                print(f"Reintroducing negative example {neg_ex}.")
+                print(f"Reintroducing:")
                 add_neg_ex(prolog, aba_framework, neg_ex.fact)
                 reintroduced.append(neg_ex.get_predicate())
 
@@ -627,10 +665,146 @@ def ensure_has_initial_pos_ex(
             if pos_ex.fact not in [
                 ex.fact for ex in aba_framework.positive_examples.values()
             ]:
-                print(f"Reintroducing positive example {pos_ex}.")
+                print(f"Reintroducing:")
                 add_pos_ex(prolog, aba_framework, pos_ex.fact)
                 reintroduced.append(pos_ex)
     return reintroduced
+
+
+def set_up_iteration(
+    prolog,
+    aba_framework,
+    initial_pos_ex,
+    initial_neg_ex,
+    curr_complete,
+    curr_consistent,
+    learned,
+    prev_removed,
+    no_progress_count,
+):
+    if not curr_consistent:
+        reintroduced = ensure_has_initial_neg_ex(prolog, aba_framework, initial_neg_ex)
+
+    if curr_complete:
+        no_progress_count = 0
+    else:
+        reintroduced = ensure_has_initial_pos_ex(prolog, aba_framework, initial_pos_ex)
+        reintroduced = [ex.fact for ex in reintroduced]
+        if len(reintroduced) == 0 and len(prev_removed) == 0:
+            no_progress_count += 1
+        else:
+            no_progress_count = 0
+
+        if no_progress_count > len(learned) and len(learned) > 0:
+            raise CredulousSemanticsException()
+        if all([ex in reintroduced for ex in prev_removed]) and len(prev_removed) > 0:
+            raise CredulousSemanticsException()
+        prev_removed = []
+
+    return no_progress_count, prev_removed
+
+
+def select_target_and_generate_rules(prolog, aba_framework, learned, count):
+    # Select target p for current iteration
+    target: Example = select_target(
+        list(aba_framework.positive_examples.values()), learned
+    )
+    if target is not None:
+        learned.append(target)
+        # Generate rules for p via Rote Learning
+        generate_rules(prolog, aba_framework, target)
+    else:
+        target = learned[len(learned) - 1 - count]
+        count += 1
+        if count == len(learned):
+            count = 0
+    return target, count
+
+
+def generalise(prolog, aba_framework, target):
+    # Generalise via folding
+    aba_framework, new_rules = fold_rules(
+        prolog, aba_framework, target.get_predicate(), target.get_arity()
+    )
+    # Generalise via subsumption
+    remove_subsumed(prolog, aba_framework, new_rules, target.get_predicate())
+
+    return aba_framework
+
+
+def learn_exceptions(prolog, aba_framework, target):
+    # Find examples of the target predicate that are covered (both positive and negative)
+    (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
+    neg_top_rules = []
+    for ex in cov_neg_ex:
+        top_rules = find_top_rule(aba_framework, ex)
+        for rule in top_rules:
+            neg_top_rules.append(rule)
+    neg_top_rules = set(neg_top_rules)
+    # Learn exceptions for each top rule of an argument for covered negative examples
+    for rule in neg_top_rules:
+        # Choose the variables of which atoms in the body to consider
+        idxs = list(
+            range(len(rule.body))
+        )  # Currently considers the variables of all atoms in the body
+        # Construct the two sets of constants consts(A+) and consts(A-)
+        (a_plus, a_minus) = get_constants(
+            aba_framework, rule, cov_pos_ex, cov_neg_ex, idxs
+        )
+        # Perform assumption introduction via undercutting
+        assumption_introduction(prolog, aba_framework, rule, idxs)
+        # Add negative and positive examples for the contraries introduced
+        (a, c_a) = aba_framework.contraries[-1]
+        (eq_a, eq_c) = find_equiv_contrary(aba_framework, c_a, a_plus, a_minus)
+
+        if eq_a is None:
+            add_examples(prolog, aba_framework, c_a.predicate, a_plus, a_minus)
+        else:
+            replace_equiv_contrary(
+                prolog,
+                aba_framework,
+                a.predicate,
+                c_a.predicate,
+                eq_a,
+                eq_c,
+            )
+
+
+def remove_iteration_examples(prolog, aba_framework, initial_goal):
+    true_cov_pos_ex = []
+    for pos_ex in aba_framework.positive_examples.values():
+        top_rules = find_top_rule(aba_framework, pos_ex)
+        safe = False
+        for r in top_rules:
+            if len(r.body) == len(r.get_equalities()):
+                if all(
+                    [
+                        eq.var_1[0].isupper() and eq.var_2[0].isupper()
+                        for eq in r.get_equalities()
+                    ]
+                ):
+                    safe = True
+            else:
+                safe = True
+        if safe:
+            true_cov_pos_ex.append(pos_ex)
+    prev_removed = [ex.fact for ex in true_cov_pos_ex]
+    prev_removed = list(
+        filter(lambda at: at.predicate == initial_goal.get_predicate(), prev_removed)
+    )
+    not_cov_neg_ex = []
+    for neg_ex in aba_framework.negative_examples.values():
+        if not covered(aba_framework, neg_ex.fact):
+            if any(
+                [
+                    r.head.predicate == neg_ex.get_predicate()
+                    for r in aba_framework.background_knowledge.values()
+                ]
+            ):
+                not_cov_neg_ex.append(neg_ex)
+    # Remove examples about target
+    remove_examples(prolog, aba_framework, true_cov_pos_ex, not_cov_neg_ex)
+    return prev_removed
 
 
 def abalearn(prolog) -> ABAFramework:
@@ -642,147 +816,37 @@ def abalearn(prolog) -> ABAFramework:
     prev_removed = []
     curr_complete = complete(aba_framework, initial_pos_ex)
     curr_consistent = consistent(aba_framework, initial_neg_ex)
-    can_fold = {}
     initial_goal = ""
     no_progress_count = 0
     while not (curr_complete and curr_consistent) or can_still_learn(
         aba_framework, initial_pos_ex
     ):
-        if not curr_consistent:
-            reintroduced = ensure_has_initial_neg_ex(
-                prolog, aba_framework, initial_neg_ex
+        try:
+            no_progress_count, prev_removed = set_up_iteration(
+                prolog,
+                aba_framework,
+                initial_pos_ex,
+                initial_neg_ex,
+                curr_complete,
+                curr_consistent,
+                learned,
+                prev_removed,
+                no_progress_count,
             )
-            for ex in reintroduced:
-                can_fold[ex] = False
-
-        if not curr_complete:
-            reintroduced = ensure_has_initial_pos_ex(
-                prolog, aba_framework, initial_pos_ex
-            )
-            reintroduced = [ex.fact for ex in reintroduced]
-            credulous = True
-            if len(reintroduced) == 0 and len(prev_removed) == 0:
-                no_progress_count += 1
-            else:
-                no_progress_count = 0
-
-            if no_progress_count > len(learned) and len(learned) > 0:
-                print("Goal achieved under credulous reasoning!")
-                break
-            for ex in prev_removed:
-                if ex not in reintroduced:
-                    credulous = False
-                    break
-            if credulous and len(prev_removed) > 0:
-                print("Goal achieved under credulous reasoning!")
-                break
-            prev_removed = []
-        else:
-            no_progress_count = 0
-        # Select target p for current iteration
-        target: Example = select_target(
-            list(aba_framework.positive_examples.values()), learned
+        except CredulousSemanticsException:
+            break
+        target, count = select_target_and_generate_rules(
+            prolog, aba_framework, learned, count
         )
-        if target is not None:
-            learned.append(target)
-            can_fold[target.get_predicate()] = True
-            # Generate rules for p via Rote Learning
-            generate_rules(prolog, aba_framework, target)
-        else:
-            target = learned[len(learned) - 1 - count]
-            count += 1
-            if count == len(learned):
-                count = 0
-
         if initial_goal == "":
             initial_goal = target
-
-        if can_fold[target.get_predicate()]:
-            # Generalise via folding
-            aba_framework, new_rules = fold_rules(
-                prolog, aba_framework, target.get_predicate(), target.get_arity()
-            )
-        # Generalise via subsumption
-        remove_subsumed(prolog, aba_framework, new_rules, target.get_predicate())
-        # Find examples of the target predicate that are covered (both positive and negative)
-        (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
-        neg_top_rules = []
-        for ex in cov_neg_ex:
-            top_rules = find_top_rule(aba_framework, ex)
-            for rule in top_rules:
-                neg_top_rules.append(rule)
-        neg_top_rules = set(neg_top_rules)
-        # Learn exceptions for each top rule of an argument for covered negative examples
-        for rule in neg_top_rules:
-            # Choose which variables to consider
-            idxs = list(range(len(rule.body))) 
-            # Currently takes in consideration first atom in the body of the rule
-            # Construct the two sets of constants consts(A+) and consts(A-)
-            (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
-            (a_plus, a_minus) = get_constants(
-                aba_framework, rule, cov_pos_ex, cov_neg_ex, idxs
-            )
-            if a_plus != [] or a_minus != []:
-                # Perform assumption introduction via undercutting
-                assumption_introduction(prolog, aba_framework, rule, idxs)
-                # Add negative and positive examples for the contraries introduced
-                (a, c_a) = aba_framework.contraries[-1]
-                (eq_a, eq_c) = find_equiv_contrary(
-                    aba_framework, c_a, a_plus, a_minus
-                )
-
-                if eq_a is None:
-                    add_examples(
-                        prolog, aba_framework, c_a.predicate, a_plus, a_minus
-                    )
-                else:
-                    replace_equiv_contrary(
-                        prolog,
-                        aba_framework,
-                        a.predicate,
-                        c_a.predicate,
-                        eq_a,
-                        eq_c,
-                    )
-        (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
-        true_cov_pos_ex = []
-        for pos_ex in aba_framework.positive_examples.values():
-            top_rules = find_top_rule(aba_framework, pos_ex)
-            safe = False
-            for r in top_rules:
-                if len(r.body) == len(r.get_equalities()):
-                    if all(
-                        [
-                            eq.var_1[0].isupper() and eq.var_2[0].isupper()
-                            for eq in r.get_equalities()
-                        ]
-                    ):
-                        safe = True
-                else:
-                    safe = True
-            if safe:
-                true_cov_pos_ex.append(pos_ex)
-        prev_removed = [ex.fact for ex in true_cov_pos_ex]
-        prev_removed = list(
-            filter(
-                lambda at: at.predicate == initial_goal.get_predicate(), prev_removed
-            )
-        )
-        not_cov_neg_ex = []
-        for neg_ex in aba_framework.negative_examples.values():
-            if not covered(aba_framework, neg_ex.fact):
-                if any(
-                    [
-                        r.head.predicate == neg_ex.get_predicate()
-                        for r in aba_framework.background_knowledge.values()
-                    ]
-                ):
-                    not_cov_neg_ex.append(neg_ex)
-        # Remove examples about target
-        remove_examples(prolog, aba_framework, true_cov_pos_ex, not_cov_neg_ex)
+        aba_framework = generalise(prolog, aba_framework, target)
+        learn_exceptions(prolog, aba_framework, target)
+        prev_removed = remove_iteration_examples(prolog, aba_framework, initial_goal)
         curr_complete = complete(aba_framework, initial_pos_ex)
         curr_consistent = consistent(aba_framework, initial_neg_ex)
 
+    print("Successfuly completed learning process!")
     # Remove all remaining examples
     remove_examples(
         prolog,
@@ -791,7 +855,7 @@ def abalearn(prolog) -> ABAFramework:
         aba_framework.negative_examples.values(),
     )
 
-    print("Successfuly completed learning process!")
+    remove_redundant_assumptions(prolog, aba_framework)
     further_generalisation(
         prolog,
         aba_framework,
