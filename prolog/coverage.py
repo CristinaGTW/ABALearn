@@ -1,4 +1,4 @@
-from elements.components import Atom, Example
+from elements.components import Atom
 from elements.aba_framework import ABAFramework
 from copy import deepcopy
 
@@ -9,7 +9,16 @@ def covered(aba_framework, atom: Atom):
             asms = list(filter(lambda a: isinstance(a, Atom), argument))
             if len(asms) == 0:
                 return True
-            if not any([covered(aba_framework, Atom('c_' + a.predicate, a.arguments)) for a in asms]):
+            try:
+                contraries_covered = any(
+                    [
+                        covered(aba_framework, Atom("c_" + a.predicate, a.arguments))
+                        for a in asms
+                    ]
+                )
+            except:
+                return False
+            if not contraries_covered:
                 return True
         return False
     for accepted in aba_framework.arguments:
@@ -38,6 +47,7 @@ def get_top_rule(aba_framework, atom: Atom):
             return top_rules
     return []
 
+
 # Finds all values sol for which atom.predicate(sol) is covered
 
 
@@ -54,20 +64,21 @@ def get_covered_solutions(aba_framework, atom: Atom) -> list[dict]:
 def update_covered(prolog, aba_framework: ABAFramework, rule):
     target_atom = deepcopy(aba_framework.background_knowledge[rule].head)
     args = {}
-    for (idx, arg) in enumerate(target_atom.arguments):
+    for idx, arg in enumerate(target_atom.arguments):
         if arg[0].isupper():
             args[arg] = idx
     target_str = str(target_atom)
-    query = f'accepted({target_str}, Rules, Asms).'
+    query = f"accepted({target_str}, Rules, Asms)."
     solutions: list[dict] = list(prolog.query(query))
     for sol in solutions:
         for arg in args:
             target_atom.arguments[args[arg]] = str(sol[arg])
         target_atom = Atom.parse_atom(str(target_atom))
-        if (str(target_atom) not in aba_framework.arguments):
+        if str(target_atom) not in aba_framework.arguments:
             aba_framework.arguments[str(target_atom)] = []
-        argument = [str(rule) for rule in sol['Rules']] + \
-            [Atom.parse_atom(str(asm)) for asm in sol['Asms']]
+        argument = [str(rule) for rule in sol["Rules"]] + [
+            Atom.parse_atom(str(asm)) for asm in sol["Asms"]
+        ]
         if argument not in aba_framework.arguments[str(target_atom)]:
             aba_framework.arguments[str(target_atom)].append(argument)
 
