@@ -32,6 +32,9 @@ import sys
 from copy import deepcopy
 
 
+NO_PROGRESS_COUNT = 0
+
+
 # If all positive examples in the given framework are covered, return True
 # Otherwise, return False.
 def complete(aba_framework, pos_exs: list[Example]) -> bool:
@@ -593,30 +596,14 @@ def replace_equiv_contrary(
     prolog, aba_framework: ABAFramework, a: str, c_a: str, eq_a: str, eq_c: str
 ):
     print(f"Replacing {c_a} with {eq_c} as they are equivalent")
-    for rule_id in aba_framework.background_knowledge:
-        rule = aba_framework.background_knowledge[rule_id]
-        if rule.head.predicate == c_a:
-            aba_framework.background_knowledge[rule_id].head.predicate = eq_c
-        elif rule.head.predicate == a:
-            aba_framework.background_knowledge[rule_id].head.predicate = eq_a
-        else:
-            for i, b in enumerate(rule.body):
-                if isinstance(b, Atom):
-                    if b.predicate == c_a:
-                        aba_framework.background_knowledge[rule_id].body[
-                            i
-                        ].predicate = eq_c
-                    if b.predicate == a:
-                        aba_framework.background_knowledge[rule_id].body[
-                            i
-                        ].predicate = eq_a
-
-    aba_framework.contraries = list(
-        filter(lambda c: c[1].predicate != c_a, aba_framework.contraries)
-    )
-    aba_framework.assumptions = list(
-        filter(lambda x: x.predicate != a, aba_framework.assumptions)
-    )
+    rule_id = list(aba_framework.background_knowledge.keys())[-1]
+    rule = aba_framework.background_knowledge[rule_id]
+    new_atom = rule.body[-1]
+    new_atom.predicate = eq_a
+    rule.body = rule.body[:-1] + [new_atom]
+    aba_framework.background_knowledge[rule_id] = rule
+    aba_framework.assumptions = aba_framework.assumptions[:-1]
+    aba_framework.contraries = aba_framework.contraries[:-1]
     set_framework(prolog, aba_framework)
 
 
@@ -680,28 +667,29 @@ def set_up_iteration(
     curr_consistent,
     learned,
     prev_removed,
-    no_progress_count,
 ):
+    global NO_PROGRESS_COUNT
     if not curr_consistent:
         reintroduced = ensure_has_initial_neg_ex(prolog, aba_framework, initial_neg_ex)
 
     if curr_complete:
-        no_progress_count = 0
+        NO_PROGRESS_COUNT = 0
     else:
         reintroduced = ensure_has_initial_pos_ex(prolog, aba_framework, initial_pos_ex)
         reintroduced = [ex.fact for ex in reintroduced]
         if len(reintroduced) == 0 and len(prev_removed) == 0:
-            no_progress_count += 1
+            NO_PROGRESS_COUNT += 1
         else:
-            no_progress_count = 0
+            NO_PROGRESS_COUNT = 0
 
-        if no_progress_count > len(learned) and len(learned) > 0:
+        if NO_PROGRESS_COUNT > len(learned) and len(learned) > 0:
             raise CredulousSemanticsException()
-        if all([ex in reintroduced for ex in prev_removed]) and len(prev_removed) > 0:
+        if (
+            all([ex.fact in reintroduced for ex in prev_removed])
+            and len(prev_removed) > 0
+        ):
             raise CredulousSemanticsException()
         prev_removed = []
-
-    return no_progress_count, prev_removed
 
 
 def select_target_and_generate_rules(prolog, aba_framework, learned, count):
@@ -770,41 +758,17 @@ def learn_exceptions(prolog, aba_framework, target):
             )
 
 
-def remove_iteration_examples(prolog, aba_framework, initial_goal):
-    true_cov_pos_ex = []
-    for pos_ex in aba_framework.positive_examples.values():
-        top_rules = find_top_rule(aba_framework, pos_ex)
-        safe = False
-        for r in top_rules:
-            if len(r.body) == len(r.get_equalities()):
-                if all(
-                    [
-                        eq.var_1[0].isupper() and eq.var_2[0].isupper()
-                        for eq in r.get_equalities()
-                    ]
-                ):
-                    safe = True
-            else:
-                safe = True
-        if safe:
-            true_cov_pos_ex.append(pos_ex)
-    prev_removed = [ex.fact for ex in true_cov_pos_ex]
-    prev_removed = list(
-        filter(lambda at: at.predicate == initial_goal.get_predicate(), prev_removed)
-    )
-    not_cov_neg_ex = []
-    for neg_ex in aba_framework.negative_examples.values():
-        if not covered(aba_framework, neg_ex.fact):
-            if any(
-                [
-                    r.head.predicate == neg_ex.get_predicate()
-                    for r in aba_framework.background_knowledge.values()
-                ]
-            ):
-                not_cov_neg_ex.append(neg_ex)
-    # Remove examples about target
-    remove_examples(prolog, aba_framework, true_cov_pos_ex, not_cov_neg_ex)
-    return prev_removed
+def remove_iteration_examples(prolog, aba_framework: ABAFramework, target: str):
+    rem_pos_ex = []
+    rem_neg_ex = []
+    for ex in aba_framework.positive_examples:
+        if aba_framework.positive_examples[ex].get_predicate() == target:
+            rem_pos_ex.append(aba_framework.positive_examples[ex])
+    for ex in aba_framework.negative_examples:
+        if aba_framework.negative_examples[ex].get_predicate() == target:
+            rem_neg_ex.append(aba_framework.negative_examples[ex])
+    remove_examples(prolog, aba_framework, rem_pos_ex, rem_neg_ex)
+    return rem_pos_ex
 
 
 def abalearn(prolog) -> ABAFramework:
@@ -813,16 +777,15 @@ def abalearn(prolog) -> ABAFramework:
     initial_neg_ex: list[Example] = list(aba_framework.negative_examples.values())
     learned = []
     count = 0
-    prev_removed = []
+    prev_rem_pos_ex = []
     curr_complete = complete(aba_framework, initial_pos_ex)
     curr_consistent = consistent(aba_framework, initial_neg_ex)
     initial_goal = ""
-    no_progress_count = 0
     while not (curr_complete and curr_consistent) or can_still_learn(
         aba_framework, initial_pos_ex
     ):
         try:
-            no_progress_count, prev_removed = set_up_iteration(
+            set_up_iteration(
                 prolog,
                 aba_framework,
                 initial_pos_ex,
@@ -830,10 +793,10 @@ def abalearn(prolog) -> ABAFramework:
                 curr_complete,
                 curr_consistent,
                 learned,
-                prev_removed,
-                no_progress_count,
+                prev_rem_pos_ex,
             )
         except CredulousSemanticsException:
+            print("Goal achieved under credulous semantics!")
             break
         target, count = select_target_and_generate_rules(
             prolog, aba_framework, learned, count
@@ -842,7 +805,10 @@ def abalearn(prolog) -> ABAFramework:
             initial_goal = target
         aba_framework = generalise(prolog, aba_framework, target)
         learn_exceptions(prolog, aba_framework, target)
-        prev_removed = remove_iteration_examples(prolog, aba_framework, initial_goal)
+        prev_rem_pos_ex = remove_iteration_examples(
+            prolog, aba_framework, target.get_predicate()
+        )
+
         curr_complete = complete(aba_framework, initial_pos_ex)
         curr_consistent = consistent(aba_framework, initial_neg_ex)
 
