@@ -6,10 +6,6 @@ my_rule(r_5,path(A,B),[A=B]).
 my_rule(r_17,path(A,B),[arc(A,B)]).
 my_rule(r_29,path(A,B),[path(A,C),path(C,B)]).
 
-% Positive Examples 
-
-% Negative Examples 
-
 % Assumptions 
 
 % Contraries 

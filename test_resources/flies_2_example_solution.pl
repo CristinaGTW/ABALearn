@@ -19,10 +19,6 @@ my_rule(r_19,flies(A),[bird(A),alpha1(A)]).
 my_rule(r_41,flies(A),[plane(A),alpha3(A)]).
 my_rule(r_48,c_alpha3(A),[damaged(A)]).
 
-% Positive Examples 
-
-% Negative Examples 
-
 % Assumptions 
 my_asm(alpha1(A)).
 my_asm(alpha2(A)).

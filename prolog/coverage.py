@@ -50,7 +50,8 @@ def get_top_rule(aba_framework, atom: Atom):
 
 # Finds all values sol for which atom.predicate(sol) is covered
 
-def get_covered_groundings(aba_framework, atom:Atom) -> list[Atom]:
+
+def get_covered_groundings(aba_framework, atom: Atom) -> list[Atom]:
     sols = []
     for argument in aba_framework.arguments:
         argument_atom = Atom.parse_atom(argument)
@@ -58,7 +59,7 @@ def get_covered_groundings(aba_framework, atom:Atom) -> list[Atom]:
             flag, res = atom.correct_grounding(argument)
             if flag:
                 sols.append((argument_atom, res))
-    return sols   
+    return sols
 
 
 def get_covered_solutions(aba_framework, atom: Atom) -> list[dict]:

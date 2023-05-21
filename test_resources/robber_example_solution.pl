@@ -9,10 +9,6 @@ my_rule(r7,wasAtWork(A),[A=matt]).
 my_rule(r_10,robber(A),[seenAtBank(A),alpha1(A)]).
 my_rule(r_17,c_alpha1(A),[banker(A)]).
 
-% Positive Examples 
-
-% Negative Examples 
-
 % Assumptions 
 my_asm(alpha1(A)).
 

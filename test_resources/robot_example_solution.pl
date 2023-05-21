@@ -10,10 +10,6 @@ my_rule(r8,busy(A),[A=6]).
 my_rule(r_41,free(A),[step(A,B),alpha1(A,B)]).
 my_rule(r_47,c_alpha1(A,B),[busy(A)]).
 
-% Positive Examples 
-
-% Negative Examples 
-
 % Assumptions 
 my_asm(alpha1(A,B)).
 

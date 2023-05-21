@@ -24,5 +24,5 @@ def parse_dataset(data_file, label):
     
     aba_framework = ABAFramework(all_rules,pos_exs, neg_exs,[],[],{},{},{})
     filename = f'{label}.pl'
-    aba_framework.create_file(filename)
+    aba_framework.create_file(filename, with_examples=True)
     return filename

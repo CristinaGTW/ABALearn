@@ -7,10 +7,6 @@ my_rule(r_15,c_alpha2(A),[pacifist(A)]).
 my_rule(r_9,c_alpha1(A),[republican(A),alpha2(A)]).
 my_rule(r_4,pacifist(A),[quacker(A),alpha1(A)]).
 
-% Positive Examples 
-
-% Negative Examples 
-
 % Assumptions 
 my_asm(alpha1(A)).
 my_asm(alpha2(A)).

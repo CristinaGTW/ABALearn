@@ -14,11 +14,12 @@ class ABAFramework:
     con_neg_ex_map: dict[str, list[str]]
     arguments: dict[str, list[list[str|Atom]]] = field(default_factory=lambda:{})
     language: list[str] = field(default_factory=lambda:[])
+    new_rules: dict[str,Rule] = field(default_factory=lambda:{})
 
 
-    def create_file(self, filename: str):
+    def create_file(self, filename: str, with_examples=False):
         f = open(filename, "w")
-        content = self.get_content()
+        content = self.get_content(with_examples)
         f.write(content)
         f.close()
 
@@ -37,20 +38,28 @@ class ABAFramework:
         for a in to_remove:
             self.arguments.pop(a)
         return removed_arguments
+    
+    def get_new_rules(self) -> list[Rule]:
+        if self.new_rules == {}:
+            for rule_id, rule in self.background_knowledge.items():
+                if rule_id[:2] == 'r_':
+                    self.new_rules[rule_id] = rule
+        return self.new_rules
 
 
-    def get_content(self) -> str:
+    def get_content(self, with_examples=False) -> str:
         content = "% Background Knowledge \n"
         for rule in self.background_knowledge.values():
             content += rule.to_prolog() + "\n"
+        
+        if with_examples:
+            content += "\n% Positive Examples \n"
+            for pos_ex in self.positive_examples.values():
+                content += pos_ex.to_prolog_pos() + "\n"
 
-        content += "\n% Positive Examples \n"
-        for pos_ex in self.positive_examples.values():
-            content += pos_ex.to_prolog_pos() + "\n"
-
-        content += "\n% Negative Examples \n"
-        for neg_ex in self.negative_examples.values():
-            content += neg_ex.to_prolog_neg() + "\n"
+            content += "\n% Negative Examples \n"
+            for neg_ex in self.negative_examples.values():
+                content += neg_ex.to_prolog_neg() + "\n"
 
         content += "\n% Assumptions \n"
         for assumption in self.assumptions:

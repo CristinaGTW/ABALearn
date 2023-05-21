@@ -124,18 +124,10 @@ class Rule:
                 body.append(Atom.parse_atom(b))
         return Rule(rule_id, head, body)
 
-    def has_constants(self):
-        for b in self.body:
-            if isinstance(b,Atom):
-                if any([not arg[0].isupper() for arg in b.arguments]):
-                    return True
-        return False
 
 
     def extract_eqs(self):
         new_rule = deepcopy(self)
-
-        body_str = ""
         all_vars = []
         for a in self.head.arguments:
             if a[0].isupper():

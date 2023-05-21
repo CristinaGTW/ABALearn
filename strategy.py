@@ -134,26 +134,23 @@ def further_generalisation(
     prolog, aba_framework: ABAFramework, predicate: str, initial_pos_ex, initial_neg_ex
 ):
     print("Attempting to further generalise...")
-    rules = deepcopy(aba_framework.background_knowledge)
     new_vars_allowed = 0
-    undone = False
-    new_rules = [""]
-    while new_rules != []:
-        new_rules = []
+    folded = True
+    new_rules = aba_framework.get_new_rules()
+    while folded:
+        rules = deepcopy(new_rules)
+        folded = False
         for rule_1_id in rules:
-            rule_1_folded = False
+            if folded == True:
+                break
             for rule_2_id in rules:
-                if rule_1_folded:
-                    break
                 rule_1 = rules[rule_1_id]
                 if rule_1.head.predicate == predicate:
                     rule_2 = rules[rule_2_id]
-                    undone = False
                     if foldable(prolog, rule_1_id, rule_2_id) and not check_loop(
                         aba_framework, predicate, rule_2
                     ):
                         prev_framework = deepcopy(aba_framework)
-                        print(f"Folding rule {rule_1} with rule {rule_2}")
                         new_rule = fold(
                             prolog,
                             aba_framework,
@@ -162,37 +159,15 @@ def further_generalisation(
                             update=False,
                         )
 
-                        if new_rule.has_constants():
-                            new_rule = unfold_and_replace(prolog, new_rule)
-
-                        while len(new_rule.get_equalities()) > 0:
-                            for i, b in enumerate(new_rule.body):
-                                if isinstance(b, Equality) and (
-                                    b.var_2[0].islower() or b.var_2[0].isdigit()
-                                ):
-                                    print(
-                                        f"Removing equality at position {i+1} from rule {new_rule}"
-                                    )
-                                    new_rule = remove_eq(
-                                        prolog, aba_framework, new_rule.rule_id, i + 1
-                                    )
-                                    break
-
-                        if (
-                            count_new_vars(new_rule, rule_1, rule_2) > new_vars_allowed
-                            and not undone
-                        ):
-                            print(
-                                "Undoing previous fold as it introduced too many new variables."
-                            )
+                        if count_new_vars(new_rule, rule_1, rule_2) > new_vars_allowed:
                             set_framework(prolog, prev_framework)
                             aba_framework = prev_framework
-                            undone = True
-                        if not undone:
-                            new_rules += [new_rule]
-                            rule_1_folded = True
-
-        rules = deepcopy(aba_framework.background_knowledge)
+                        else:
+                            print(f"Folding rule {rule_1} with rule {rule_2}")
+                            new_rules.pop(rule_1_id)
+                            new_rules[new_rule.rule_id] = new_rule
+                            folded = True
+                            break
 
     return aba_framework
 
@@ -433,15 +408,13 @@ def fold_rules(
                 if rule_1.head.predicate == predicate:
                     rule_2 = rules[rule_2_id]
                     undone = False
+                    two_folds = False
                     if foldable(prolog, rule_1_id, rule_2_id) and not check_loop(
                         aba_framework, predicate, rule_2
                     ):
                         prev_framework = deepcopy(aba_framework)
                         prev_neg = count_neg_covered(aba_framework, predicate)
-                        print(f"Folding rule {rule_1} with rule {rule_2}")
                         new_rule = fold(prolog, aba_framework, rule_1_id, rule_2_id)
-                        if new_rule.has_constants():
-                            new_rule = unfold_and_replace(prolog, new_rule)
                         eqs_count = len(new_rule.get_equalities())
                         if eqs_count > 0:
                             for rule_3_id in rules:
@@ -457,9 +430,6 @@ def fold_rules(
                                         aba_framework, predicate, rule_3
                                     ):
                                         temp_framework = deepcopy(aba_framework)
-                                        print(
-                                            f"Folding rule {new_rule} with rule {rule_3}"
-                                        )
                                         new_rule_2 = fold(
                                             prolog,
                                             aba_framework,
@@ -467,12 +437,16 @@ def fold_rules(
                                             rule_3_id,
                                         )
                                         if len(new_rule_2.get_equalities()) > 0:
-                                            print(
-                                                "Undoing previous fold as it wasn't optimal."
-                                            )
                                             set_framework(prolog, temp_framework)
                                             aba_framework = temp_framework
                                         else:
+                                            print(
+                                                f"Folding rule {rule_1} with rule {rule_2}"
+                                            )
+                                            print(
+                                                f"Folding rule {new_rule} with rule {rule_3}"
+                                            )
+                                            two_folds = True
                                             new_rule = new_rule_2
                                             new_vars_allowed += eqs_count
                                             break
@@ -482,9 +456,6 @@ def fold_rules(
                                 if isinstance(b, Equality) and (
                                     b.var_2[0].islower() or b.var_2[0].isdigit()
                                 ):
-                                    print(
-                                        f"Removing equality at position {i+1} from rule {new_rule}"
-                                    )
                                     new_rule = remove_eq(
                                         prolog, aba_framework, new_rule.rule_id, i + 1
                                     )
@@ -492,9 +463,6 @@ def fold_rules(
                         curr_neg = count_neg_covered(aba_framework, predicate)
                         if curr_neg > prev_neg:
                             if introduced_neg:
-                                print(
-                                    "Undoing previous fold as it covered additional negative examples."
-                                )
                                 set_framework(prolog, prev_framework)
                                 aba_framework = prev_framework
                                 undone = True
@@ -504,15 +472,15 @@ def fold_rules(
                             count_new_vars(new_rule, rule_1, rule_2) > new_vars_allowed
                             and not undone
                         ):
-                            print(
-                                "Undoing previous fold as it introduced too many new variables."
-                            )
                             set_framework(prolog, prev_framework)
                             aba_framework = prev_framework
                             undone = True
                         if not undone:
+                            if not two_folds:
+                                print(f"Folding rule {rule_1} with rule {rule_2}")
                             new_rules += [new_rule]
                             rule_1_folded = True
+                            break
 
         rules = deepcopy(aba_framework.background_knowledge)
         new_vars_allowed += 1
@@ -813,13 +781,6 @@ def abalearn(prolog) -> ABAFramework:
         curr_consistent = consistent(aba_framework, initial_neg_ex)
 
     print("Successfuly completed learning process!")
-    # Remove all remaining examples
-    remove_examples(
-        prolog,
-        aba_framework,
-        aba_framework.positive_examples.values(),
-        aba_framework.negative_examples.values(),
-    )
 
     remove_redundant_assumptions(prolog, aba_framework)
     further_generalisation(
