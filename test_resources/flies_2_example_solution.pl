@@ -13,11 +13,11 @@ my_rule(r11,plane(A),[A=k]).
 my_rule(r12,plane(A),[A=m]).
 my_rule(r13,damaged(A),[A=k]).
 my_rule(r14,damaged(A),[A=m]).
-my_rule(r_35,c_alpha2(A),[superpenguin(A)]).
-my_rule(r_28,c_alpha1(A),[penguin(A),alpha2(A)]).
-my_rule(r_19,flies(A),[bird(A),alpha1(A)]).
-my_rule(r_41,flies(A),[plane(A),alpha3(A)]).
-my_rule(r_48,c_alpha3(A),[damaged(A)]).
+my_rule(r_31,flies(A),[plane(A),alpha1(A)]).
+my_rule(r_32,flies(A),[bird(A),alpha2(A)]).
+my_rule(r_41,c_alpha1(A),[damaged(A)]).
+my_rule(r_55,c_alpha2(A),[penguin(A),alpha3(A)]).
+my_rule(r_64,c_alpha3(A),[superpenguin(A)]).
 
 % Assumptions 
 my_asm(alpha1(A)).

@@ -99,9 +99,13 @@ def set_covered(prolog, aba_framework: ABAFramework):
         update_covered(prolog, aba_framework, r)
 
 
-def count_neg_covered(aba_framework: ABAFramework, predicate) -> int:
-    count = 0
+def count_covered(aba_framework: ABAFramework) -> int:
+    neg_count = 0
     for ex in aba_framework.negative_examples.values():
         if str(ex.fact) in aba_framework.arguments:
-            count += 1
-    return count
+            neg_count += 1
+    pos_count = 0
+    for ex in aba_framework.positive_examples.values():
+        if str(ex.fact) in aba_framework.arguments:
+            pos_count += 1
+    return (pos_count, neg_count)

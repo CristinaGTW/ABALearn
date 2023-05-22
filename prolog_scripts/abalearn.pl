@@ -148,7 +148,8 @@ undercut(R,AtomPos,(R1,H,B1,Asm,CAsm,B)) :-
    assert(con_body(CAsm, B)),
    append(B,[Asm],B1),
    gensym(r_,R1),
-   replace(my_rule(R,H,B),my_rule(R1,H,B1)).
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
+   numbervars((H,B1)).
 
 
 atoms([],_B,[]).

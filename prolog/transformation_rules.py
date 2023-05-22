@@ -22,7 +22,7 @@ def rote_learn_all(prolog, aba_framework, predicate, arity):
     return new_rules
 
 
-def remove_eq(prolog, aba_framework, rule_id, eq_pos):
+def remove_eq(prolog, aba_framework, rule_id, eq_pos, update=False):
     query = f"removeq({rule_id},{eq_pos},(R,H,B))."
     result = list(prolog.query(query))[0]
     new_rule_id = str(result['R'])
@@ -34,8 +34,9 @@ def remove_eq(prolog, aba_framework, rule_id, eq_pos):
     new_rule = Rule.parse_rule(rule_str)
     aba_framework.background_knowledge.pop(rule_id)
     aba_framework.background_knowledge[new_rule_id] = new_rule
-    aba_framework.adjust_arguments(rule_id)
-    update_covered(prolog, aba_framework, new_rule_id)
+    if update:
+        aba_framework.adjust_arguments(rule_id)
+        update_covered(prolog, aba_framework, new_rule_id)
     
     return new_rule
 
@@ -58,8 +59,11 @@ def fold(prolog, aba_framework,rule_id_1, rule_id_2, update = True) -> Rule:
     return new_rule
 
 
-def foldable(prolog, rule_id_1, rule_id_2) -> bool:
-    query = f"foldable({rule_id_1},{rule_id_2},S)."
+def foldable(prolog, rule_1, rule_2, safe=True) -> bool:
+    if safe:
+        if rule_1.head.predicate == rule_2.head.predicate:
+            return False
+    query = f"foldable({rule_1.rule_id},{rule_2.rule_id},S)."
     result = list(prolog.query(query))
     return result != []
 
