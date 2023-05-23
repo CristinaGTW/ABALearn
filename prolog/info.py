@@ -4,30 +4,30 @@ from elements.components import Rule, Example, Atom
 
 def get_rules(prolog) -> list[Rule]:
     result = list(prolog.query("get_rules(N,H,B)."))
-    all_rules = []
+    all_rules = {}
     for rule in result:
         body = ""
         for i in range(len(rule["B"])):
             body += str(rule["B"][i]) + ","
         body = body[:-1]
         rule_str = rule["N"] + ":" + rule["H"] + "<-" + body
-        all_rules.append(Rule.parse_rule(rule_str))
+        all_rules[rule['N']]=Rule.parse_rule(rule_str)
     return all_rules
 
 
-def get_positive_examples(prolog) -> list[Example]:
+def get_positive_examples(prolog) -> dict[str,Example]:
     result: list[dict] = list(prolog.query("pos(N,E)."))
-    pos_exs: list[Example] = []
+    pos_exs: dict[str,Example] = {}
     for ex in result:
-        pos_exs.append(Example(ex["N"], Atom.parse_atom(ex["E"])))
+        pos_exs[ex["N"]] = Example(ex["N"], Atom.parse_atom(ex["E"]))
     return pos_exs
 
 
-def get_negative_examples(prolog) -> list[Example]:
+def get_negative_examples(prolog) -> dict[str,Example]:
     result: list[dict] = list(prolog.query("neg(N,E)."))
-    neg_exs: list[Example] = []
+    neg_exs: dict[str,Example] = {}
     for ex in result:
-        neg_exs.append(Example(ex["N"], Atom.parse_atom(ex["E"])))
+        neg_exs[ex["N"]] = Example(ex["N"], Atom.parse_atom(ex["E"]))
     return neg_exs
 
 
@@ -61,8 +61,8 @@ def get_con_body_map(prolog) -> dict[str, list[str]]:
 
 def get_current_aba_framework(prolog, aba_framework) -> ABAFramework:
     rules: list[Rule] = get_rules(prolog)
-    pos_exs: list[Example] = get_positive_examples(prolog)
-    neg_exs: list[Example] = get_negative_examples(prolog)
+    pos_exs: dict[str,Example] = get_positive_examples(prolog)
+    neg_exs: dict[str,Example] = get_negative_examples(prolog)
     assumptions: list[Atom] = get_assumptions(prolog)
     contraries: list[tuple[Atom, Atom]] = get_contraries(prolog)
     con_body_map: dict[str, list[str]] = get_con_body_map(prolog)

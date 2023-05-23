@@ -53,7 +53,7 @@ def _format_res(result: list):
 def count_neg_covered(prolog, aba_framework, predicate) -> tuple[int, int]:
     grounded_extension = aba_framework.get_grounded_extension(prolog)
     neg_count = 0
-    for ex in aba_framework.negative_examples:
+    for ex in aba_framework.negative_examples.values():
         if ex.get_predicate() == predicate and str(ex.fact) in grounded_extension:
             neg_count+=1
     return neg_count

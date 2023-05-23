@@ -1,4 +1,4 @@
-class TopRuleNotFoundException(Exception):
+class CredulousSemanticsException(Exception):
     pass
 
 class InvalidRuleBodyException(Exception):

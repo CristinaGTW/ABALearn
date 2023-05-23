@@ -1,3 +1,5 @@
+from elements.components import Rule
+
 def rote_learn(prolog, example_id):
     query = f"rote_learn({example_id})."
     q = list(prolog.query(query))
@@ -11,15 +13,31 @@ def rote_learn_all(prolog, predicate, arity):
 
 
 def remove_eq(prolog, rule_id, eq_pos):
-    query = f"removeq({rule_id},{eq_pos})."
-    q= list(prolog.query(query))
-    del q
+    query = f"removeq({rule_id},{eq_pos},(R,H,B))."
+    result = list(prolog.query(query))[0]
+    new_rule_id = str(result['R'])
+    body = ""
+    for i in range(len(result["B"])):
+        body += str(result["B"][i]) + ","
+    body = body[:-1]
+    rule_str = new_rule_id + ':' + result['H'] + '<-' + body
+    new_rule = Rule.parse_rule(rule_str)
+    
+    return new_rule
 
 
-def fold(prolog, rule_id_1, rule_id_2):
-    query = f"fold({rule_id_1},{rule_id_2})."
-    q = list(prolog.query(query))
-    del q
+
+def fold(prolog,rule_id_1, rule_id_2, update = True):
+    query = f"fold({rule_id_1},{rule_id_2},(R,H,B))."
+    result = list(prolog.query(query))[0]
+    body = ""
+    for i in range(len(result["B"])):
+        body += str(result["B"][i]) + ","
+    body = body[:-1]
+    rule_id = result['R']
+    rule_str = rule_id + ':' + result['H'] + '<-' + body
+    new_rule = Rule.parse_rule(rule_str)
+    return new_rule
 
 
 def foldable(prolog, rule_id_1, rule_id_2) -> bool:

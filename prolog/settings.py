@@ -51,7 +51,7 @@ def unfold_and_replace(prolog, rule: Rule) -> Rule:
     return new_rule
 
 
-def restore_framework(prolog, aba_framework) -> None:
+def set_framework(prolog, aba_framework) -> None:
     query = "retractall(my_rule(_,_,_))."
     q = list(prolog.query(query))
     del q
@@ -68,7 +68,7 @@ def restore_framework(prolog, aba_framework) -> None:
     q = list(prolog.query(query))
     del q
 
-    for rule in aba_framework.background_knowledge:
+    for rule in aba_framework.background_knowledge.values():
         query = f"assertz({rule.to_prolog()[:-1]})."
         q =list(prolog.query(query))
         del q
@@ -83,12 +83,12 @@ def restore_framework(prolog, aba_framework) -> None:
         q = list(prolog.query(query))
         del q
 
-    for pos in aba_framework.positive_examples:
+    for pos in aba_framework.positive_examples.values():
         query = f"assertz({pos.to_prolog_pos()[:-1]})."
         q = list(prolog.query(query))
         del q
 
-    for neg in aba_framework.negative_examples:
+    for neg in aba_framework.negative_examples.values():
         query = f"assertz({neg.to_prolog_neg()[:-1]})."
         q = list(prolog.query(query))
         del q

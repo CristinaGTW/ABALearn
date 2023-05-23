@@ -6,9 +6,9 @@ import re
 
 @dataclass
 class ABAFramework:
-    background_knowledge: list[Rule]
-    positive_examples: list[Example]
-    negative_examples: list[Example]
+    background_knowledge: dict[str,Rule]
+    positive_examples: dict[str,Example]
+    negative_examples: dict[str,Example]
     assumptions: list[Atom]
     contraries: list[tuple[Atom, Atom]]
     con_body_map: dict[str, list[str]]
@@ -16,6 +16,7 @@ class ABAFramework:
     con_neg_ex_map: dict[str, list[str]]
     language: list[str] = field(default_factory=lambda: [])
     grounded_extension: list[str] = None
+    new_rules: list[Rule] = field(default_factory=lambda: [])
 
     def get_grounded_extension(self, prolog):
         if self.grounded_extension == None:
@@ -30,15 +31,15 @@ class ABAFramework:
 
     def get_content(self) -> str:
         content = "% Background Knowledge \n"
-        for rule in self.background_knowledge:
+        for rule in self.background_knowledge.values():
             content += rule.to_prolog() + "\n"
 
         content += "\n% Positive Examples \n"
-        for pos_ex in self.positive_examples:
+        for pos_ex in self.positive_examples.values():
             content += pos_ex.to_prolog_pos() + "\n"
 
         content += "\n% Negative Examples \n"
-        for neg_ex in self.negative_examples:
+        for neg_ex in self.negative_examples.values():
             content += neg_ex.to_prolog_neg() + "\n"
 
         content += "\n% Assumptions \n"
@@ -53,7 +54,7 @@ class ABAFramework:
 
     def set_language(self):
         lang = []
-        for r in self.background_knowledge:
+        for r in self.background_knowledge.values():
             for arg in r.head.arguments:
                 if not arg[0].isupper():
                     lang.append(arg)
@@ -211,8 +212,9 @@ class ABAFramework:
                 normalised.append((curr1, curr2))
             return normalised
 
-    def _from_prolog_arg_output(self, s: str) -> list[str]:
-        predicate, arguments_str = s[:-1].split("(", 1)
+
+    def _from_prolog_arg_output(self, claim: str, support: list[str]) -> list[str]:
+        predicate, arguments_str = claim[:-1].split("(", 1)
         arguments = arguments_str.split(",")
         count = 0
         var_dict = {}
@@ -241,6 +243,8 @@ class ABAFramework:
                 normalised += arg + ','
             normalised = normalised[:-1]
             normalised += ')'
+            if len(support) > 0:
+                normalised += ',' + [str(s) for s in support]
             return [normalised]
         else:
             groundings = []
@@ -251,25 +255,28 @@ class ABAFramework:
                     curr += arg + ','
                 curr = curr[:-1]
                 curr += ')'
+                if len(support) > 0:
+                    curr += ',' + [str(s) for s in support]
                 normalised.append(curr)
             return normalised
 
     def aspartix_input(self, prolog, filename):
         input = ''
-        query: str = f"findall(A,argument((A,B),Rule), Result)."
+        query: str = f"findall((A,B),argument((A,B),Rule), Result)."
         solutions: list[dict] = list(prolog.query(query))
         for sol in solutions:
             for arg in sol['Result']:
-                concs = self._from_prolog_arg_output(str(arg))
+                claim, support = arg.args
+                concs = self._from_prolog_arg_output(str(claim), [str(s) for s in support])
                 for conc in concs:
                     input += 'arg(' + conc + '). \n'
 
-        query: str = f"findall((A,B),attacks((A,A2),(B,B2)), Result)."
+        query: str = f"findall((A,A2,B,B2),attacks((A,A2),(B,B2)), Result)."
         solutions: list[dict] = list(prolog.query(query))
         for sol in solutions:
             for att in sol['Result']:
-                att = str(att)[2:-1]
-                [att1, att2] = re.split(r',\s*(?=[a-zA-Z])', att)
+                att1,supp1,att2,supp2 = att.args
+                breakpoint()
                 atts = self._from_prolog_att_output(att1, att2)
                 for (att1, att2) in atts:
                     input += 'att(' + att1 + ',' + att2 + '). \n'
@@ -277,3 +284,12 @@ class ABAFramework:
         f.write(input)
         f.close()
         return filename
+
+
+
+    def get_new_rules(self) -> list[Rule]:
+        if self.new_rules == []:
+            for rule_id,rule in self.background_knowledge.items():
+                if rule_id[:2] == 'r_':
+                    self.new_rules.append(rule)
+        return self.new_rules

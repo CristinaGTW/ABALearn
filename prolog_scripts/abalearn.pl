@@ -54,12 +54,14 @@ eq_zip([X|Xs],[T|Ts],[X=T|Eqs]) :-
 
 %%%%% REMOVE EQUALITIES %%%%%%
 
-removeq(R,EqPos) :-
+removeq(R,EqPos,(R1,H,B1)) :-
    my_rule(R,H,B),
    nth1(EqPos,B,Eq,B1),
    Eq=(_=_),
    gensym(r_,R1),
-   replace(my_rule(R,H,B),my_rule(R1,H,B1)).
+   replace(my_rule(R,H,B),my_rule(R1,H,B1)),
+   numbervars((H,B1)).
+
 
 replace(P1,P2) :-
    retract(P1),
@@ -78,7 +80,7 @@ geneqs(R) :-
 
 
 %%%%% FOLDING %%%%%%
-fold(R1,R2) :-
+fold(R1,R2, (R3,H,B3)) :-
    R1\=R2,                    
    my_rule(R1,H,Bd1),
    my_rule(R2,K,Bd2),
@@ -91,7 +93,8 @@ fold(R1,R2) :-
    append(REqs2,[K],NewB),
    append(NewB,Rest,B3),
    gensym(r_,R3),
-   replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)).
+   replace(my_rule(R1,H,Bd1),my_rule(R3,H,B3)),
+   numbervars((H,B3)).
 
 %%%%% CHECKS IF RULES ARE FOLDABLE
 foldable(R1,R2,Subconj) :-
