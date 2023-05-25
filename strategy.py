@@ -181,12 +181,11 @@ def find_top_rule(aba_framework: ABAFramework, ex: Example) -> list[Rule]:
 
 
 def remove_subsumed(
-    prolog, aba_framework: ABAFramework, new_rules: list[Rule], target
+    prolog, aba_framework: ABAFramework, target
 ) -> ABAFramework:
-    rules = deepcopy(aba_framework.background_knowledge)
-    for rule_id in rules:
-        if aba_framework.background_knowledge[rule_id].head.predicate == target:
-            rule = aba_framework.background_knowledge[rule_id]
+    rules = deepcopy(aba_framework.get_new_rules())
+    for rule_id, rule in rules.items():
+        if rule.head.predicate == target:
             sols = get_solutions(aba_framework, rule)
             aba_framework.background_knowledge.pop(rule_id)
             removed_arguments = aba_framework.adjust_arguments(rule_id)
@@ -530,11 +529,11 @@ def fold_rules(
                 new_rules.append(new_rule)
                 update_covered(prolog, aba_framework, new_rule.rule_id)
 
-    new_rules, removed_rules = keep_unique_rules(prolog, aba_framework, new_rules)
+    _,removed_rules = keep_unique_rules(prolog, aba_framework, new_rules)
     for rule in removed_rules:
         aba_framework.adjust_arguments(rule)
 
-    return aba_framework, new_rules
+    return aba_framework
 
 
 def assumption_introduction(prolog, aba_framework, rule, atom_pos) -> ABAFramework:
@@ -725,11 +724,11 @@ def select_target_and_generate_rules(prolog, aba_framework, learned, count):
 
 def generalise(prolog, aba_framework, target):
     # Generalise via folding
-    aba_framework, new_rules = fold_rules(
+    aba_framework = fold_rules(
         prolog, aba_framework, target.get_predicate(), target.get_arity()
     )
     # Generalise via subsumption
-    remove_subsumed(prolog, aba_framework, new_rules, target.get_predicate())
+    remove_subsumed(prolog, aba_framework, target.get_predicate())
 
     return aba_framework
 

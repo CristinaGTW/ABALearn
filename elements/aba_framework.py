@@ -14,7 +14,6 @@ class ABAFramework:
     con_neg_ex_map: dict[str, list[str]]
     arguments: dict[str, list[list[str|Atom]]] = field(default_factory=lambda:{})
     language: list[str] = field(default_factory=lambda:[])
-    new_rules: dict[str,Rule] = field(default_factory=lambda:{})
 
 
     def create_file(self, filename: str, with_examples=False):
@@ -39,12 +38,12 @@ class ABAFramework:
             self.arguments.pop(a)
         return removed_arguments
     
-    def get_new_rules(self) -> list[Rule]:
-        if self.new_rules == {}:
-            for rule_id, rule in self.background_knowledge.items():
+    def get_new_rules(self) -> dict[str,Rule]:
+        new_rules = {}
+        for rule_id, rule in self.background_knowledge.items():
                 if rule_id[:2] == 'r_':
-                    self.new_rules[rule_id] = rule
-        return self.new_rules
+                    new_rules[rule_id] = rule
+        return new_rules
 
 
     def get_content(self, with_examples=False) -> str:
