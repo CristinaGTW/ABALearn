@@ -16,7 +16,11 @@ class ABAFramework:
     con_neg_ex_map: dict[str, list[str]]
     language: list[str] = field(default_factory=lambda: [])
     grounded_extension: list[str] = None
+    claim_to_arguments: dict[str, list[str]] = field(default_factory=lambda:{})
+    arguments_to_id: dict[str, int] = field(default_factory=lambda:{})
+    id_to_arguments: dict[int, str] = field(default_factory=lambda: {})
     new_rules: list[Rule] = field(default_factory=lambda: [])
+    arg_count:int = 0
 
     def get_grounded_extension(self, prolog):
         if self.grounded_extension == None:
@@ -144,9 +148,9 @@ class ABAFramework:
         arguments = [arg.strip() for arg in arguments]
         return predicate, arguments, has_vars
 
-    def _from_prolog_att_output(self, s1, s2):
-        predicate1, arguments1, has_vars1 = self._get_pred_and_args(s1)
-        predicate2, arguments2, has_vars2 = self._get_pred_and_args(s2)
+    def _from_prolog_att_output(self, a1, s1, a2, s2):
+        predicate1, arguments1, has_vars1 = self._get_pred_and_args(a1)
+        predicate2, arguments2, has_vars2 = self._get_pred_and_args(a2)
     
         if not has_vars1 and not has_vars2:
             normalised1 = predicate1 + '('
@@ -154,11 +158,15 @@ class ABAFramework:
                 normalised1 += arg + ','
             normalised1 = normalised1[:-1]
             normalised1 += ')'
+            if len(s1)>0:
+                normalised1 += ',' + ','.join([str(s).split('(')[0] for s in s1])
             normalised2 = predicate2 + '('
             for arg in arguments2:
                 normalised2 += arg + ','
             normalised2 = normalised2[:-1]
             normalised2 += ')'
+            if len(s2)>0:
+                normalised2 += ',' + ','.join([str(s).split('(')[0] for s in s2])
             return [(normalised1, normalised2)]
         elif not has_vars1:
             normalised1 = predicate1 + '('
@@ -166,6 +174,8 @@ class ABAFramework:
                 normalised1 += arg + ','
             normalised1 = normalised1[:-1]
             normalised1 += ')'
+            if len(s1)>0:
+                normalised1 += ',' + ','.join([str(s).split('(')[0] for s in s1])
             normalised = []
             groundings2 = []
             self._ground_atom(arguments2, {}, [], groundings2)
@@ -175,6 +185,8 @@ class ABAFramework:
                     curr += arg + ','
                 curr = curr[:-1]
                 curr += ')'
+                if len(s2)>0:
+                    curr += ',' + ','.join([str(s).split('(')[0] for s in s2])
                 normalised.append((normalised1, curr))
             return normalised
         elif not has_vars2:
@@ -183,6 +195,8 @@ class ABAFramework:
                 normalised2 += arg + ','
             normalised2 = normalised2[:-1]
             normalised2 += ')'
+            if len(s2)>0:
+                normalised2 += ',' + ','.join([str(s).split('(')[0] for s in s2])
             normalised = []
             groundings1 = []
             self._ground_atom(arguments1, {}, [], groundings1)
@@ -192,6 +206,8 @@ class ABAFramework:
                     curr += arg + ','
                 curr = curr[:-1]
                 curr += ')'
+                if len(s1)>0:
+                    curr += ',' + ','.join([str(s).split('(')[0] for s in s1])
                 normalised.append((curr, normalised2))
             return normalised
         else:
@@ -204,11 +220,15 @@ class ABAFramework:
                     curr1 += arg + ','
                 curr1 = curr1[:-1]
                 curr1 += ')'
+                if len(s1)>0:
+                    curr1 += ',' + ','.join([str(s).split('(')[0] for s in s1])
                 curr2 = predicate2 + '('
                 for arg in gr2:
                     curr2 += arg + ','
                 curr2 = curr2[:-1]
                 curr2 += ')'
+                if len(s2)>0:
+                    curr2 += ',' + ','.join([str(s).split('(')[0] for s in s2])
                 normalised.append((curr1, curr2))
             return normalised
 
@@ -244,7 +264,7 @@ class ABAFramework:
             normalised = normalised[:-1]
             normalised += ')'
             if len(support) > 0:
-                normalised += ',' + [str(s) for s in support]
+                normalised += ',' + ','.join([str(s).split('(')[0] for s in support])
             return [normalised]
         else:
             groundings = []
@@ -256,7 +276,7 @@ class ABAFramework:
                 curr = curr[:-1]
                 curr += ')'
                 if len(support) > 0:
-                    curr += ',' + [str(s) for s in support]
+                    curr += ',' + ','.join([str(s).split('(')[0] for s in support])
                 normalised.append(curr)
             return normalised
 
@@ -269,17 +289,23 @@ class ABAFramework:
                 claim, support = arg.args
                 concs = self._from_prolog_arg_output(str(claim), [str(s) for s in support])
                 for conc in concs:
-                    input += 'arg(' + conc + '). \n'
-
+                    claim = conc.split(',alpha',1)[0]
+                    self.claim_to_arguments[claim] = self.claim_to_arguments.get(claim,[]) + [conc]
+                    self.arguments_to_id[conc] = self.arg_count
+                    self.id_to_arguments[self.arg_count] = conc
+                    input += 'arg('+ str(self.arg_count) + '). \n'
+                    self.arg_count += 1
         query: str = f"findall((A,A2,B,B2),attacks((A,A2),(B,B2)), Result)."
         solutions: list[dict] = list(prolog.query(query))
         for sol in solutions:
             for att in sol['Result']:
-                att1,supp1,att2,supp2 = att.args
-                breakpoint()
-                atts = self._from_prolog_att_output(att1, att2)
+                att1 = str(att.args[0])
+                supp1 = [str(s) for s in att.args[1].args[0]]
+                att2 = str(att.args[1].args[1].args[0])
+                supp2 = [str(s) for s in att.args[1].args[1].args[1]]
+                atts = self._from_prolog_att_output(att1, supp1, att2, supp2)
                 for (att1, att2) in atts:
-                    input += 'att(' + att1 + ',' + att2 + '). \n'
+                    input += 'att(' + str(self.arguments_to_id[att1]) + ',' + str(self.arguments_to_id[att2]) + '). \n'
         f = open(filename, "w")
         f.write(input)
         f.close()

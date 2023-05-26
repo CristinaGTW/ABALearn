@@ -5,14 +5,16 @@ import re
 def covered(prolog, aba_framework, exs: list[Example]) -> bool:
     grounded_extension = aba_framework.get_grounded_extension(prolog)
     for ex in exs:
-        if not str(ex.fact) in grounded_extension:
+        if str(ex.fact) not in aba_framework.claim_to_arguments:
+            return False
+        if not any([aba_framework.arguments_to_id[arg] in grounded_extension for arg in aba_framework.claim_to_arguments[str(ex.fact)]]):
             return False
     return True
         
 
 def extract_in_terms(input_string):
     in_terms = re.findall(r'in\((.*?)\)', input_string)
-    return [term + ')' for term in in_terms]
+    return [int(term) for term in in_terms]
 
 def make_grounded_extension(prolog, aba_framework):
     input_file = aba_framework.aspartix_input(prolog, "input.af")
@@ -35,9 +37,10 @@ def get_covered_solutions(prolog, aba_framework, atom: Atom) -> list[dict]:
         if arg[0].isupper():
             keys[arg] = idx
     for at in grounded_extension:
-        [pred,_] = at.split('(',1)
+        argument = aba_framework.id_to_arguments[at].split(',alpha',1)[0]
+        [pred,_] = argument.split('(',1)
         if pred == atom.predicate:
-            at_sol = Atom.parse_atom(at)
+            at_sol = Atom.parse_atom(argument)
             sol_dict = {}
             for key in keys:
                 sol_dict[key] = at_sol.arguments[keys[key]]

@@ -269,22 +269,41 @@ def generate_rules(prolog, aba_framework, ex: Example) -> ABAFramework:
     return aba_framework
 
 
-def keep_unique_rules(prolog, rules):
+def same_bodies(body_1, body_2):
+    if len(body_1) != len(body_2):
+        return False
+    for b1, b2 in zip(body_1, body_2):
+        if isinstance(b1, Atom) and isinstance(b2, Atom):
+            if b1.predicate != b2.predicate:
+                return False
+        elif isinstance(b1, Equality) and isinstance(b2, Equality):
+            if b1 != b2:
+                return False
+        else:
+            return False
+    return True
+
+def keep_unique_rules(prolog, aba_framework, rules):
+    removed_rules = []
     length = len(rules)
     i = 0
     while i < length - 1:
         j = i + 1
         while j < length:
-            if rules[i].head == rules[j].head and rules[i].body == rules[j].body:
-                rules.remove(rules[i])
-                rem_rule(prolog, rules[i].rule_id)
+            if rules[i].head == rules[j].head and same_bodies(
+                rules[i].body, rules[j].body
+            ):
+                rem_rule(prolog, rules[j].rule_id)
+                removed_rules.append(rules[j].rule_id)
+                aba_framework.background_knowledge.pop(rules[j].rule_id)
+                rules.remove(rules[j])
                 i -= 1
                 j -= 1
                 length -= 1
                 break
             j += 1
         i += 1
-    return rules
+    return rules, removed_rules
 
 
 def check_loop(aba_framework: ABAFramework, predicate: str, rule: Rule):
@@ -366,6 +385,7 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str, arity:int) -
                                     b.var_2[0].islower() or b.var_2[0].isdigit()
                                 ):
                                     new_rule = remove_eq(prolog, new_rule.rule_id, i + 1)
+                                    break
                             aba_framework = get_current_aba_framework(
                                 prolog, aba_framework
                             )
@@ -396,7 +416,7 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str, arity:int) -
                             new_rules += [new_rule]
         new_vars_allowed += 1
 
-    new_rules = keep_unique_rules(prolog, new_rules)
+    new_rules = keep_unique_rules(prolog, aba_framework, new_rules)
     aba_framework = get_current_aba_framework(prolog, aba_framework)
     aba_framework.grounded_extension = make_grounded_extension(prolog, aba_framework)
     return (aba_framework, new_rules)
@@ -691,6 +711,7 @@ def abalearn(prolog) -> ABAFramework:
         aba_framework = generalise(prolog, aba_framework, target)
         aba_framework = learn_exceptions(prolog, aba_framework, target)
         prev_removed, aba_framework = remove_iteration_examples(prolog, aba_framework, target.get_predicate())
+        breakpoint()
         curr_complete = complete(prolog, aba_framework,initial_pos_ex)
         curr_consistent = consistent(prolog, aba_framework,initial_neg_ex)
 
