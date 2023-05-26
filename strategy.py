@@ -130,7 +130,7 @@ def get_solutions(aba_framework, rule: Rule) -> list[tuple[str, ...]]:
 
 
 def further_generalisation(
-    prolog, aba_framework: ABAFramework, predicate: str, initial_pos_ex, initial_neg_ex
+    prolog, aba_framework: ABAFramework, predicate: str
 ):
     print("Attempting to further generalise...")
     new_vars_allowed = 0
@@ -408,7 +408,7 @@ def count_new_vars(new_rule: Rule, rule_1: Rule, rule_2: Rule) -> int:
 
 
 def fold_rules(
-    prolog, aba_framework: ABAFramework, predicate: str, arity: int
+    prolog, aba_framework: ABAFramework, predicate: str
 ) -> ABAFramework:
     new_rules = []
     rules = deepcopy(aba_framework.background_knowledge)
@@ -606,9 +606,9 @@ def find_equiv_contrary(
 
 
 def replace_equiv_contrary(
-    prolog, aba_framework: ABAFramework, a: str, c_a: str, eq_a: str, eq_c: str
+    prolog, aba_framework: ABAFramework, eq_a: str
 ):
-    print(f"Replacing {c_a} with {eq_c} as they are equivalent")
+    print(f"Replacing the last introduced assumption with {eq_a} as they are equivalent")
     rule_id = list(aba_framework.background_knowledge.keys())[-1]
     rule = aba_framework.background_knowledge[rule_id]
     new_atom = rule.body[-1]
@@ -725,7 +725,7 @@ def select_target_and_generate_rules(prolog, aba_framework, learned, count):
 def generalise(prolog, aba_framework, target):
     # Generalise via folding
     aba_framework = fold_rules(
-        prolog, aba_framework, target.get_predicate(), target.get_arity()
+        prolog, aba_framework, target.get_predicate()
     )
     # Generalise via subsumption
     remove_subsumed(prolog, aba_framework, target.get_predicate())
@@ -764,10 +764,7 @@ def learn_exceptions(prolog, aba_framework, target):
             replace_equiv_contrary(
                 prolog,
                 aba_framework,
-                a.predicate,
-                c_a.predicate,
-                eq_a,
-                eq_c,
+                eq_a
             )
 
 
@@ -831,9 +828,7 @@ def abalearn(prolog) -> ABAFramework:
     further_generalisation(
         prolog,
         aba_framework,
-        initial_goal.get_predicate(),
-        initial_pos_ex,
-        initial_neg_ex,
+        initial_goal.get_predicate()
     )
     aba_framework.create_file("solution.pl")
     print("Finished.")
