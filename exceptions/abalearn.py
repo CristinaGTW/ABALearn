@@ -6,3 +6,6 @@ class InvalidRuleBodyException(Exception):
 
 class CredulousSemanticsException(Exception):
     pass
+
+class IncorrectGroundingException(Exception):
+    pass

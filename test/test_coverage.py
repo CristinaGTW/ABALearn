@@ -1,5 +1,4 @@
-from prolog.coverage import get_covered_solutions
-from coverage.engine import covered
+from coverage.engine import covered, get_cov_solutions
 from elements.components import Atom, Example
 from pyswip import Prolog
 from prolog.config import set_up_abalearn, reset
@@ -37,7 +36,7 @@ def test_get_covered_solutions():
     prolog = set_up_abalearn("test_resources/flies_example.pl")
     aba_framework = set_up_aba_framework(prolog)
 
-    result = get_covered_solutions(aba_framework, Atom("bird", ["X"]))
+    result = get_cov_solutions(aba_framework, Atom("bird", ["X"]))
 
     assert result == [
         {"X": "e"},

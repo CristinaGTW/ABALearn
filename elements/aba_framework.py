@@ -12,7 +12,6 @@ class ABAFramework:
     con_body_map: dict[str, list[str]]
     con_pos_ex_map: dict[str, list[str]]
     con_neg_ex_map: dict[str, list[str]]
-    arguments: dict[str, list[list[str|Atom]]] = field(default_factory=lambda:{})
     language: list[str] = field(default_factory=lambda:[])
 
 
@@ -21,22 +20,6 @@ class ABAFramework:
         content = self.get_content(with_examples)
         f.write(content)
         f.close()
-
-    def adjust_arguments(self, rule_id):
-        to_remove = []
-        removed_arguments = {}
-        for accepted, arguments in self.arguments.items():
-            removed_args = list(filter(lambda arg:rule_id in arg,arguments))
-            if len(removed_args) > 0:
-                if accepted not in removed_arguments:
-                    removed_arguments[accepted] = []
-                removed_arguments[accepted].extend(removed_args)
-            self.arguments[accepted] = list(filter(lambda arg:rule_id not in arg,arguments))
-            if self.arguments[accepted] == []:
-                to_remove.append(accepted)
-        for a in to_remove:
-            self.arguments.pop(a)
-        return removed_arguments
     
     def get_new_rules(self) -> dict[str,Rule]:
         new_rules = {}

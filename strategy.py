@@ -16,14 +16,7 @@ from prolog.settings import (
 )
 from prolog.info import set_up_aba_framework
 from prolog.config import set_up_abalearn
-from prolog.coverage import (
-    count_covered,
-    get_covered_solutions,
-    get_top_rule,
-    get_covered_groundings,
-    update_covered
-)
-from coverage.engine import covered
+from coverage.engine import covered, get_top_rules, get_cov_solutions, count_covered, get_cov_solutions_with_atoms
 from elements.aba_framework import ABAFramework
 from elements.components import Atom, Equality, Example, Rule
 from exceptions.abalearn import InvalidRuleBodyException, CredulousSemanticsException
@@ -124,7 +117,7 @@ def get_solutions(aba_framework, rule: Rule) -> list[tuple[str, ...]]:
     ):
         return [tuple(replace_args)]
 
-    sols = get_covered_solutions(aba_framework, rule.head)
+    sols = get_cov_solutions(aba_framework, rule.head)
     sols = [tuple(sol.values()) for sol in sols]
     return sols
 
@@ -155,7 +148,6 @@ def further_generalisation(
                             aba_framework,
                             rule_1.rule_id,
                             rule_2.rule_id,
-                            update=False,
                         )
 
                         if count_new_vars(new_rule, rule_1, rule_2) > new_vars_allowed:
@@ -171,13 +163,6 @@ def further_generalisation(
     return aba_framework
 
 
-def find_top_rule(aba_framework: ABAFramework, ex: Example) -> list[Rule]:
-    top_rule_ids = get_top_rule(aba_framework, ex.fact)
-    top_rules = []
-    for rule in aba_framework.background_knowledge:
-        if rule in top_rule_ids:
-            top_rules.append(aba_framework.background_knowledge[rule])
-    return top_rules
 
 
 def remove_subsumed(
@@ -188,20 +173,13 @@ def remove_subsumed(
         if rule.head.predicate == target:
             sols = get_solutions(aba_framework, rule)
             aba_framework.background_knowledge.pop(rule_id)
-            removed_arguments = aba_framework.adjust_arguments(rule_id)
-            sols_without_rule = get_covered_solutions(aba_framework, rule.head)
+            sols_without_rule = get_cov_solutions(aba_framework, rule.head)
             sols_without_rule = [tuple(sol.values()) for sol in sols_without_rule]
             if set(sols).issubset(set(sols_without_rule)) and len(sols) > 0:
                 rem_rule(prolog, rule_id)
                 print(f"Removing rule {rule} as it is subsumed by some other rule")
             else:
                 aba_framework.background_knowledge[rule_id] = rule
-                for accepted in removed_arguments:
-                    if accepted not in aba_framework.arguments:
-                        aba_framework.arguments[accepted] = []
-                    aba_framework.arguments[accepted].extend(
-                        removed_arguments[accepted]
-                    )
 
 
 def find_justified_groundings(
@@ -220,7 +198,7 @@ def find_justified_groundings(
                 elif arg[0].isupper():
                     needs_check = True
             if needs_check:
-                sols = get_covered_solutions(aba_framework, body_copy[i])
+                sols = get_cov_solutions(aba_framework, body_copy[i])
 
                 for sol in sols:
                     for var in sol:
@@ -268,7 +246,8 @@ def get_constants(
 ) -> tuple[list[list[str]], list[list[str]]]:
     pos_ex_consts = []
     neg_ex_consts = []
-    head_sol: list[tuple(Atom, dict)] = get_covered_groundings(
+    breakpoint()
+    head_sol: list[tuple(Atom, dict)] = get_cov_solutions_with_atoms(
         aba_framework, top_rule.head
     )
     pos_ex_sols: list[dict] = []
@@ -350,7 +329,6 @@ def generate_rules(prolog, aba_framework, ex: Example) -> ABAFramework:
         new_rule = gen_eqs(prolog, aba_framework, rule.rule_id)
         if new_rule is not None:
             rule = new_rule
-        update_covered(prolog, aba_framework, rule.rule_id)
 
 
 def same_bodies(body_1, body_2):
@@ -503,15 +481,13 @@ def fold_rules(
                 folded[rule_1_id] = True
                 folded[rule_2_id] = True
                 new_rule = fold(
-                    prolog, aba_framework, rule_1_id, rule_2_id, update=False
+                    prolog, aba_framework, rule_1_id, rule_2_id
                 )
-                aba_framework.adjust_arguments(rule_1_id)
                 print(f"Folding rule {rule_1_id} with rule {rule_2_id}")
                 if not stats[0] is None:
                     print(f"Folding rule {new_rule.rule_id} with rule {stats[0]}")
-                    aba_framework.adjust_arguments(new_rule.rule_id)
                     new_rule = fold(
-                        prolog, aba_framework, new_rule.rule_id, stats[0], update=False
+                        prolog, aba_framework, new_rule.rule_id, stats[0]
                     )
                 while len(new_rule.get_equalities()) > 0:
                     for i, b in enumerate(new_rule.body):
@@ -523,15 +499,11 @@ def fold_rules(
                                 aba_framework,
                                 new_rule.rule_id,
                                 i + 1,
-                                update=False,
                             )
                             break
                 new_rules.append(new_rule)
-                update_covered(prolog, aba_framework, new_rule.rule_id)
 
     _,removed_rules = keep_unique_rules(prolog, aba_framework, new_rules)
-    for rule in removed_rules:
-        aba_framework.adjust_arguments(rule)
 
     return aba_framework
 
@@ -622,7 +594,7 @@ def replace_equiv_contrary(
 
 def can_still_learn(aba_framework: ABAFramework, initial_pos_ex) -> bool:
     for pos_ex in initial_pos_ex:
-        top_rules = find_top_rule(aba_framework, pos_ex)
+        top_rules = get_top_rules(aba_framework, pos_ex.fact)
         safe = False
         for r in top_rules:
             if len(r.body) == len(r.get_equalities()):
@@ -742,7 +714,7 @@ def learn_exceptions(prolog, aba_framework, target):
     (cov_pos_ex, cov_neg_ex) = find_covered_ex(aba_framework, target)
     neg_top_rules = []
     for ex in cov_neg_ex:
-        top_rules = find_top_rule(aba_framework, ex)
+        top_rules = get_top_rules(aba_framework, ex.fact)
         for rule in top_rules:
             neg_top_rules.append(rule)
     neg_top_rules = set(neg_top_rules)

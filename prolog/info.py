@@ -1,6 +1,5 @@
 from elements.aba_framework import ABAFramework
 from elements.components import Rule, Example, Atom
-from prolog.coverage import set_covered
 
 def get_rules(prolog) -> list[Rule]:
     result = list(prolog.query("findall((N,H,B), my_rule(N,H,B),Result)."))
@@ -74,6 +73,5 @@ def set_up_aba_framework(prolog) -> ABAFramework:
     aba_framework: ABAFramework = ABAFramework(
         rules, pos_exs, neg_exs, assumptions, contraries, con_body_map, {}, {}
     )
-    set_covered(prolog, aba_framework)
 
     return aba_framework
