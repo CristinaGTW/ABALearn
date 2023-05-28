@@ -1,8 +1,8 @@
 from elements.components import Rule, Atom, Equality, Example
 
 
-TRUE_VALUES = ['YES', 'T', 'TRUE', '1', 1, 'WON']
-FALSE_VALUES = ['NO', 'F', 'FALSE', '0', 0, 'NOWIN']
+TRUE_VALUES = ['YES', 'T', 'TRUE', '1', 1, 'WON', 'POSITIVE']
+FALSE_VALUES = ['NO', 'F', 'FALSE', '0', 0, 'NOWIN', 'NEGATIVE']
 
 def row_to_learning_problem(row, headers, label, count, pos_ex_count, neg_ex_count, non_standard_values) -> tuple[list[Rule], int]:
     rules = {}

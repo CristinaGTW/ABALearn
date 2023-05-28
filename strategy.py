@@ -474,7 +474,7 @@ def fold_rules(
                         if not undone:
                             cov_pos_ex, cov_neg_ex = count_covered(aba_framework)
                             if cov_neg_ex <= least_neg_ex and cov_pos_ex >= most_pos_ex:
-                                if cov_neg_ex > 0:
+                                if cov_neg_ex > 1:
                                     least_neg_ex = cov_neg_ex
                                 most_pos_ex = cov_pos_ex
                                 if two_folds:
