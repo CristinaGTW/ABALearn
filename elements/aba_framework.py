@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from elements.components import Rule, Example, Atom, Equality
-
+from copy import deepcopy
 
 @dataclass
 class ABAFramework:
@@ -44,6 +44,23 @@ class ABAFramework:
                 if rule_id[:2] == 'r_':
                     new_rules[rule_id] = rule
         return new_rules
+
+    def is_assumption(self, atom):
+        return any([asm.predicate == atom.predicate for asm in self.assumptions])
+
+    def get_contrary(self, atom):
+        for a,c_a in self.contraries:
+            if a.predicate == atom.predicate:
+                con = deepcopy(c_a)
+                con.arguments = atom.arguments
+                return con
+    
+    def get_all_potential_top_rules(self, atom):
+        rules = []
+        for rule in self.background_knowledge.values():
+            if rule.head.predicate == atom.predicate:
+                rules.append(rule)
+        return rules
 
 
     def get_content(self, with_examples=False) -> str:

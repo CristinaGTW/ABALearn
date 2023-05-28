@@ -21,9 +21,9 @@ from prolog.coverage import (
     get_covered_solutions,
     get_top_rule,
     get_covered_groundings,
-    update_covered,
-    covered,
+    update_covered
 )
+from coverage.engine import covered
 from elements.aba_framework import ABAFramework
 from elements.components import Atom, Equality, Example, Rule
 from exceptions.abalearn import InvalidRuleBodyException, CredulousSemanticsException
@@ -651,7 +651,7 @@ def ensure_has_initial_neg_ex(
             ]:
                 print(f"Reintroducing:")
                 add_neg_ex(prolog, aba_framework, neg_ex.fact)
-                reintroduced.append(neg_ex.get_predicate())
+                reintroduced.append(neg_ex.fact)
 
     return reintroduced
 
@@ -679,18 +679,23 @@ def set_up_iteration(
     curr_complete,
     curr_consistent,
     learned,
-    prev_removed,
+    prev_rem_pos_ex,
+    prev_rem_neg_ex
 ):
     global NO_PROGRESS_COUNT
     if not curr_consistent:
         reintroduced = ensure_has_initial_neg_ex(prolog, aba_framework, initial_neg_ex)
-
+        if (
+            all([ex.fact in reintroduced for ex in prev_rem_neg_ex])
+            and len(prev_rem_neg_ex) > 0 and len(prev_rem_pos_ex) == 0
+        ) :
+            raise CredulousSemanticsException()
     if curr_complete:
         NO_PROGRESS_COUNT = 0
     else:
         reintroduced = ensure_has_initial_pos_ex(prolog, aba_framework, initial_pos_ex)
         reintroduced = [ex.fact for ex in reintroduced]
-        if len(reintroduced) == 0 and len(prev_removed) == 0:
+        if len(reintroduced) == 0 and len(prev_rem_pos_ex) == 0:
             NO_PROGRESS_COUNT += 1
         else:
             NO_PROGRESS_COUNT = 0
@@ -698,11 +703,10 @@ def set_up_iteration(
         if NO_PROGRESS_COUNT > len(learned) and len(learned) > 0:
             raise CredulousSemanticsException()
         if (
-            all([ex.fact in reintroduced for ex in prev_removed])
-            and len(prev_removed) > 0
+            all([ex.fact in reintroduced for ex in prev_rem_pos_ex])
+            and len(prev_rem_pos_ex) > 0
         ):
             raise CredulousSemanticsException()
-        prev_removed = []
 
 
 def select_target_and_generate_rules(prolog, aba_framework, learned, count):
@@ -778,7 +782,7 @@ def remove_iteration_examples(prolog, aba_framework: ABAFramework, target: str):
         if aba_framework.negative_examples[ex].get_predicate() == target:
             rem_neg_ex.append(aba_framework.negative_examples[ex])
     remove_examples(prolog, aba_framework, rem_pos_ex, rem_neg_ex)
-    return rem_pos_ex
+    return rem_pos_ex, rem_neg_ex
 
 
 def abalearn(prolog) -> ABAFramework:
@@ -788,6 +792,7 @@ def abalearn(prolog) -> ABAFramework:
     learned = []
     count = 0
     prev_rem_pos_ex = []
+    prev_rem_neg_ex = []
     curr_complete = complete(aba_framework, initial_pos_ex)
     curr_consistent = consistent(aba_framework, initial_neg_ex)
     initial_goal = ""
@@ -804,6 +809,7 @@ def abalearn(prolog) -> ABAFramework:
                 curr_consistent,
                 learned,
                 prev_rem_pos_ex,
+                prev_rem_neg_ex
             )
         except CredulousSemanticsException:
             print("Goal achieved under credulous semantics!")
@@ -815,10 +821,9 @@ def abalearn(prolog) -> ABAFramework:
             initial_goal = target
         aba_framework = generalise(prolog, aba_framework, target)
         learn_exceptions(prolog, aba_framework, target)
-        prev_rem_pos_ex = remove_iteration_examples(
+        prev_rem_pos_ex, prev_rem_neg_ex = remove_iteration_examples(
             prolog, aba_framework, target.get_predicate()
         )
-
         curr_complete = complete(aba_framework, initial_pos_ex)
         curr_consistent = consistent(aba_framework, initial_neg_ex)
 

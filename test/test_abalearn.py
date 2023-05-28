@@ -23,13 +23,13 @@ def test_get_positive_examples():
 
 def test_prolog_can_be_modified():
     prolog = set_up_abalearn("test_resources/flies_example.pl")
-    list(prolog.query("assert(my_rule(r9,bird(s),[has_wings(s)]))."))
+    list(prolog.query("assertz(my_rule(r9,bird(s),[has_wings(s)]))."))
     rules = get_rules(prolog)
     assert len(rules) == 9
     rem_rule(prolog, "r9")
     rules = get_rules(prolog)
     assert len(rules) == 8
-    list(prolog.query("assert(my_rule(r9,bird(s),[has_wings(s)]))."))
+    list(prolog.query("assertz(my_rule(r9,bird(s),[has_wings(s)]))."))
     rules = get_rules(prolog)
     assert len(rules) == 9
 

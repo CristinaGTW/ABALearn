@@ -5,7 +5,7 @@ my_rule(r3,quacker(A),[A=b]).
 my_rule(r4,republican(A),[A=b]).
 my_rule(r_24,c_alpha2(A),[pacifist(A)]).
 my_rule(r_15,c_alpha1(A),[republican(A),alpha2(A)]).
-my_rule(r_8,pacifist(A),[quacker(A),alpha1(A)]).
+my_rule(r_25,pacifist(A),[quacker(A),alpha1(A)]).
 
 % Assumptions 
 my_asm(alpha1(A)).

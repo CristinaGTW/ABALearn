@@ -1,4 +1,5 @@
-from prolog.coverage import covered, get_covered_solutions
+from prolog.coverage import get_covered_solutions
+from coverage.engine import covered
 from elements.components import Atom, Example
 from pyswip import Prolog
 from prolog.config import set_up_abalearn, reset

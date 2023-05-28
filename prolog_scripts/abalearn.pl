@@ -35,7 +35,7 @@ rote_learn(N,(R,Head,Eqs)) :-
    eq_zip(Xs,Ts,Eqs),
    Head =..[Pred|Xs], 
    gensym(r_,R),
-   assert(my_rule(R,Head,Eqs)),
+   assertz(my_rule(R,Head,Eqs)),
    numbervars((Head,Eqs)).
 
 % rote_learn all positive examples
@@ -64,7 +64,7 @@ removeq(R,EqPos,(R1,H,B1)) :-
 
 replace(P1,P2) :-
    retract(P1),
-   assert(P2).
+   assertz(P2).
 
 %%%%% GENERALISE EQUALITIES %%%%%%
 
@@ -129,7 +129,7 @@ rem_rule(R) :-
    retract(my_rule(R,_H,_B)).
 add_rule(H,B) :-
    gensym(r_,R),
-   assert(my_rule(R,H,B)).
+   assertz(my_rule(R,H,B)).
 
 
 
@@ -143,9 +143,9 @@ undercut(R,AtomPos,(R1,H,B1,Asm,CAsm,B)) :-
    gensym(c_alpha,CAlpha),
    Asm=..[Alpha|Vs],
    CAsm=..[CAlpha|Vs],
-   assert(my_asm(Asm)),
-   assert(contrary(Asm,CAsm)),
-   assert(con_body(CAsm, B)),
+   assertz(my_asm(Asm)),
+   assertz(contrary(Asm,CAsm)),
+   assertz(con_body(CAsm, B)),
    append(B,[Asm],B1),
    gensym(r_,R1),
    replace(my_rule(R,H,B),my_rule(R1,H,B1)),
@@ -160,8 +160,8 @@ atoms([N|Ns],B,[A|As]) :-
 
 % Add/Remove examples
 
-add_pos(A,N) :- gensym(p_,N), assert(pos(N,A)).
-add_neg(A,N) :- gensym(n_,N), assert(neg(N,A)).
+add_pos(A,N) :- gensym(p_,N), assertz(pos(N,A)).
+add_neg(A,N) :- gensym(n_,N), assertz(neg(N,A)).
 rem_pos(N) :- retract(pos(N,_A)).
 rem_neg(N) :- retract(neg(N,_A)).
 
