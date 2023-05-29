@@ -11,7 +11,7 @@ def get_top_rules(aba_framework:ABAFramework, atom:Atom):
     top_rules = []
     for rule in rules:
         var_dict = map_vars(rule.head, atom)
-        if rule_supports(aba_framework, rule, atom, var_dict, []):
+        if rule_supports(aba_framework, rule, atom, var_dict, [])[0]:
             top_rules.append(rule)
     return top_rules
 

@@ -213,9 +213,11 @@ def find_justified_groundings(
         if isinstance(b, Equality):
             if b.var_1 in curr_groundings.keys():
                 if not b.var_2[0].isupper():
+                    breakpoint()
                     assert curr_groundings[b.var_1] == b.var_2
                 else:
                     if b.var_2 in curr_groundings.keys():
+                        breakpoint()
                         assert curr_groundings[b.var_1] == curr_groundings[b.var_2]
                     else:
                         curr_groundings[b.var_2] = curr_groundings[b.var_1]
@@ -246,13 +248,11 @@ def get_constants(
 ) -> tuple[list[list[str]], list[list[str]]]:
     pos_ex_consts = []
     neg_ex_consts = []
-    breakpoint()
     head_sol: list[tuple(Atom, dict)] = get_cov_solutions_with_atoms(
         aba_framework, top_rule.head
     )
     pos_ex_sols: list[dict] = []
     neg_ex_sols: list[dict] = []
-
     for sol_atom, sol in head_sol:
         if (
             any([ex.fact.correct_grounding(str(sol_atom))[0] for ex in cov_pos_ex])
