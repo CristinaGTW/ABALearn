@@ -45,6 +45,13 @@ class ABAFramework:
                     new_rules[rule_id] = rule
         return new_rules
 
+    def get_potential_top_rules(self, predicate:str):
+        res = []
+        for rule_id, rule in self.background_knowledge.items():
+            if rule.head.predicate == predicate:
+                res.append(rule_id)
+        return res
+
 
     def get_content(self, with_examples=False) -> str:
         content = "% Background Knowledge \n"
