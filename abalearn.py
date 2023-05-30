@@ -14,5 +14,6 @@ if __name__ == "__main__":
     else:
         prolog = set_up_abalearn(input)
     start_time = time.time()
-    abalearn(prolog)
+    aba_framework = abalearn(prolog)
+    print(aba_framework.get_learned_rules())
     print("--- Learning time: %s seconds ---" % (time.time() - start_time))

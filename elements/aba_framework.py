@@ -52,20 +52,30 @@ class ABAFramework:
             content += rule.to_prolog() + "\n"
         
         if with_examples:
-            content += "\n% Positive Examples \n"
-            for pos_ex in self.positive_examples.values():
-                content += pos_ex.to_prolog_pos() + "\n"
+            if len(self.positive_examples) > 0 :
+                content += "\n% Positive Examples \n"
+                for pos_ex in self.positive_examples.values():
+                    content += pos_ex.to_prolog_pos() + "\n"
 
-            content += "\n% Negative Examples \n"
-            for neg_ex in self.negative_examples.values():
-                content += neg_ex.to_prolog_neg() + "\n"
+            if len(self.negative_examples) > 0 :
+                content += "\n% Negative Examples \n"
+                for neg_ex in self.negative_examples.values():
+                    content += neg_ex.to_prolog_neg() + "\n"
 
-        content += "\n% Assumptions \n"
-        for assumption in self.assumptions:
-            content += assumption.to_prolog_asm() + "\n"
+        if len(self.assumptions) > 0:
+            content += "\n% Assumptions \n"
+            for assumption in self.assumptions:
+                content += assumption.to_prolog_asm() + "\n"
 
-        content += "\n% Contraries \n"
-        for contrary in self.contraries:
-            content += contrary[0].to_prolog_contrary(contrary[1]) + "\n"
+            content += "\n% Contraries \n"
+            for contrary in self.contraries:
+                content += contrary[0].to_prolog_contrary(contrary[1]) + "\n"
 
+        return content
+
+    def get_learned_rules(self):
+        content = "\n --- Learned rules --- \n"
+        new_rules = self.get_new_rules()
+        for rule_id in new_rules:
+            content += str(self.background_knowledge[rule_id]) + '\n'
         return content

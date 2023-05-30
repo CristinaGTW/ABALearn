@@ -93,6 +93,7 @@ def get_stats(aba_framework, pos_exs: list[Example], neg_exs: list[Example]):
             tn += 1
 
     accuracy = (tp + tn) / (tp + tn + fp + fn)
+    print(f"--- Metrics ---")
     print(f"Accuracy: {accuracy}")
     if tp + fp > 0:
         precision = tp / (tp + fp)
@@ -393,10 +394,13 @@ def fold_rules(
     new_vars_allowed = 0
     undone = False
     fold_stats = {}
-    least_neg_ex = len(aba_framework.negative_examples)
-    most_pos_ex = 0
-    while fold_stats == {} and new_vars_allowed < 10:
+    folded = {}
+    performed_fold = False
+    while not performed_fold and new_vars_allowed < 10:
         for rule_1_id in rules:
+            fold_stats = {}
+            least_neg_ex = len(aba_framework.negative_examples)
+            most_pos_ex = 0
             for rule_2_id in rules:
                 rule_1 = rules[rule_1_id]
                 if rule_1.head.predicate == predicate:
@@ -456,54 +460,52 @@ def fold_rules(
                                     least_neg_ex = cov_neg_ex
                                 most_pos_ex = cov_pos_ex
                                 if two_folds:
-                                    fold_stats[rule_1_id + "," + rule_2_id] = (
+                                    fold_stats[rule_2_id] = (
                                         second_fold,
                                         cov_pos_ex,
                                         cov_neg_ex,
                                     )
                                 else:
-                                    fold_stats[rule_1_id + "," + rule_2_id] = (
+                                    fold_stats[rule_2_id] = (
                                         None,
                                         cov_pos_ex,
                                         cov_neg_ex,
                                     )
                         set_framework(prolog, prev_framework)
                         aba_framework = prev_framework
+
+            for rule_2_id, stats in fold_stats.items():
+                if stats[1] >= most_pos_ex and stats[2] <= least_neg_ex:
+                    
+                    if rule_2_id not in folded or not stats[0] is None:
+                        folded[rule_2_id] = True
+                        new_rule = fold(
+                            prolog, aba_framework, rule_1_id, rule_2_id
+                        )
+                        performed_fold = True
+                        print(f"Folding rule {rule_1_id} with rule {rule_2_id}")
+                        if not stats[0] is None:
+                            print(f"Folding rule {new_rule.rule_id} with rule {stats[0]}")
+                            new_rule = fold(
+                                prolog, aba_framework, new_rule.rule_id, stats[0]
+                            )
+                        while len(new_rule.get_equalities()) > 0:
+                            for i, b in enumerate(new_rule.body):
+                                if isinstance(b, Equality) and (
+                                    b.var_2[0].islower() or b.var_2[0].isdigit()
+                                ):
+                                    new_rule = remove_eq(
+                                        prolog,
+                                        aba_framework,
+                                        new_rule.rule_id,
+                                        i + 1,
+                                    )
+                                    break
+                        new_rules.append(new_rule)
+                        break
         new_vars_allowed += 1
 
-    folded = {}
-    for rule_1_2, stats in fold_stats.items():
-        if stats[1] >= most_pos_ex and stats[2] <= least_neg_ex:
-            rule_1_id, rule_2_id = rule_1_2.split(",")
-            if rule_1_id not in folded and (
-                rule_2_id not in folded or not stats[0] is None
-            ):
-                folded[rule_1_id] = True
-                folded[rule_2_id] = True
-                new_rule = fold(
-                    prolog, aba_framework, rule_1_id, rule_2_id
-                )
-                print(f"Folding rule {rule_1_id} with rule {rule_2_id}")
-                if not stats[0] is None:
-                    print(f"Folding rule {new_rule.rule_id} with rule {stats[0]}")
-                    new_rule = fold(
-                        prolog, aba_framework, new_rule.rule_id, stats[0]
-                    )
-                while len(new_rule.get_equalities()) > 0:
-                    for i, b in enumerate(new_rule.body):
-                        if isinstance(b, Equality) and (
-                            b.var_2[0].islower() or b.var_2[0].isdigit()
-                        ):
-                            new_rule = remove_eq(
-                                prolog,
-                                aba_framework,
-                                new_rule.rule_id,
-                                i + 1,
-                            )
-                            break
-                new_rules.append(new_rule)
-
-    _,removed_rules = keep_unique_rules(prolog, aba_framework, new_rules)
+    keep_unique_rules(prolog, aba_framework, new_rules)
 
     return aba_framework
 
@@ -808,7 +810,7 @@ def abalearn(prolog) -> ABAFramework:
         initial_goal.get_predicate()
     )
     aba_framework.create_file("solution.pl")
-    print("Finished.")
+    print("Finished. \n \n")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)
     return aba_framework
 
