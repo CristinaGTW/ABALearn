@@ -29,6 +29,19 @@ def test_flies_2_example():
     )
 
 
+def test_flies_3_example():
+    prolog = Prolog()
+    prolog.consult("prolog_scripts/abalearn.pl")
+    reset(prolog)
+    input = "test_resources/flies_3_example.pl"
+    prolog = set_up_abalearn(input)
+    aba_framework = abalearn(prolog)
+    assert (
+        aba_framework.get_content()
+        == open("test_resources/flies_3_example_solution.pl").read()
+    )
+
+
 def test_robber_example():
     prolog = Prolog()
     prolog.consult("prolog_scripts/abalearn.pl")

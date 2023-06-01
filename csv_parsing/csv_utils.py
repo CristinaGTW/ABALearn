@@ -9,30 +9,17 @@ def row_to_learning_problem(row, headers, label, count, pos_ex_count, neg_ex_cou
     target = row[0]
     for val, attr in zip(row[1:-1], headers[1:-1]):
         val_str = val.upper()
-        if attr.upper() == 'GENDER':
-            if val_str == 'M' or val_str == 'MALE':
-                rule_id = f'r{count}'
-                rules[rule_id] = (Rule(rule_id, Atom(
-                'male', ['X']), [Equality('X', target)]))
-                count += 1
-        else:
-            if val_str in TRUE_VALUES:
-                rule_id = f'r{count}'
-                rules[rule_id] = (Rule(rule_id, Atom(
-                    attr, ['X']), [Equality('X', target)]))
-                count += 1
-            elif val_str not in FALSE_VALUES:
-                if attr not in non_standard_values:
-                    non_standard_values[attr] = val_str
-                    rule_id = f'r{count}'
-                    rules[rule_id] = (Rule(rule_id, Atom(
-                    f'{attr}_{val_str}', ['X']), [Equality('X', target)]))
-                    count += 1
-                elif val_str == non_standard_values[attr]:
-                    rule_id = f'r{count}'
-                    rules[rule_id]  = (Rule(rule_id, Atom(
-                    f'{attr}_{val_str}', ['X']), [Equality('X', target)]))
-                    count += 1
+        if val_str in TRUE_VALUES:
+            rule_id = f'r{count}'
+            rules[rule_id] = (Rule(rule_id, Atom(
+                attr, ['X']), [Equality('X', target)]))
+            count += 1
+        elif val_str not in FALSE_VALUES and val_str != '?':
+            non_standard_values[attr] = val_str
+            rule_id = f'r{count}'
+            rules[rule_id] = (Rule(rule_id, Atom(
+            f'{attr}_{val_str}', ['X']), [Equality('X', target)]))
+            count += 1
 
     if row[-1].upper() in TRUE_VALUES:
         pos_flag = True

@@ -9,7 +9,7 @@ my_rule(r7,superpenguin(A),[A=e]).
 my_rule(r8,superpenguin(A),[A=f]).
 my_rule(r_21,flies(A),[bird(A),alpha1(A)]).
 my_rule(r_34,c_alpha1(A),[penguin(A),alpha2(A)]).
-my_rule(r_43,c_alpha2(A),[superpenguin(A)]).
+my_rule(r_41,c_alpha2(A),[superpenguin(A)]).
 
 % Assumptions 
 my_asm(alpha1(A)).

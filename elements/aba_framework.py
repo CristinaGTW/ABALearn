@@ -74,8 +74,8 @@ class ABAFramework:
         return content
 
     def get_learned_rules(self):
-        content = "\n --- Learned rules --- \n"
+        content = "\n--- Learned rules --- \n"
         new_rules = self.get_new_rules()
         for rule_id in new_rules:
-            content += str(self.background_knowledge[rule_id]) + '\n'
+            content += str(self.background_knowledge[rule_id]).split(':')[1] + '\n'
         return content
