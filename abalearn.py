@@ -4,7 +4,12 @@ from datasets import parse_dataset
 import sys
 import time
 
-DATASETS_FILE_MAP = {'acute': 'data/acute/acute.csv', 'autism': 'data/autism/autism.csv', 'krkp': 'data/krkp/krkp.csv','tictactoe': 'data/tictactoe/tictactoe.csv'}
+DATASETS_FILE_MAP = {
+    "acute": "data/acute/acute.csv",
+    "autism": "data/autism/autism.csv",
+    "krkp": "data/krkp/krkp.csv",
+    "tictactoe": "data/tictactoe/tictactoe.csv",
+}
 
 
 if __name__ == "__main__":

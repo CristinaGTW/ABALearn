@@ -15,14 +15,14 @@ def add_pos_ex(prolog, aba_framework, ex_atom: Atom) -> None:
     query = f"add_pos({ex_atom},N)."
     q = list(prolog.query(query))
     result = list(prolog.query(query))[0]
-    aba_framework.positive_examples[result['N']] = Example(result['N'], ex_atom)
+    aba_framework.positive_examples[result["N"]] = Example(result["N"], ex_atom)
     del q
 
 
 def add_neg_ex(prolog, aba_framework, ex_atom: Atom) -> None:
     query = f"add_neg({ex_atom},N)."
     result = list(prolog.query(query))[0]
-    aba_framework.negative_examples[result['N']] = Example(result['N'], ex_atom)
+    aba_framework.negative_examples[result["N"]] = Example(result["N"], ex_atom)
 
 
 def rem_pos_ex(prolog, aba_framework, ex_id: str) -> None:
@@ -30,15 +30,18 @@ def rem_pos_ex(prolog, aba_framework, ex_id: str) -> None:
     list(prolog.query(query))
     aba_framework.positive_examples.pop(ex_id)
 
+
 def rem_neg_ex(prolog, aba_framework, ex_id: str) -> None:
     query = f"rem_neg({ex_id})."
     list(prolog.query(query))
     aba_framework.negative_examples.pop(ex_id)
 
+
 def rem_rule(prolog, rule_id: str) -> None:
     query = f"rem_rule({rule_id})."
     q = list(prolog.query(query))
     del q
+
 
 def unfold_and_replace(prolog, aba_framework, rule: Rule) -> Rule:
     new_rule = rule.extract_eqs()

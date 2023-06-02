@@ -16,7 +16,13 @@ from prolog.settings import (
 )
 from prolog.info import set_up_aba_framework
 from prolog.config import set_up_abalearn
-from coverage.engine import covered, get_top_rules, get_cov_solutions, count_covered, get_cov_solutions_with_atoms
+from coverage.engine import (
+    covered,
+    get_top_rules,
+    get_cov_solutions,
+    count_covered,
+    get_cov_solutions_with_atoms,
+)
 from elements.aba_framework import ABAFramework
 from elements.components import Atom, Equality, Example, Rule
 from exceptions.abalearn import InvalidRuleBodyException, CredulousSemanticsException
@@ -123,9 +129,7 @@ def get_solutions(aba_framework, rule: Rule) -> list[tuple[str, ...]]:
     return sols
 
 
-def further_generalisation(
-    prolog, aba_framework: ABAFramework, predicate: str
-):
+def further_generalisation(prolog, aba_framework: ABAFramework, predicate: str):
     new_vars_allowed = 0
     folded = True
     new_rules = aba_framework.get_new_rules()
@@ -162,11 +166,7 @@ def further_generalisation(
     return aba_framework
 
 
-
-
-def remove_subsumed(
-    prolog, aba_framework: ABAFramework, target
-) -> ABAFramework:
+def remove_subsumed(prolog, aba_framework: ABAFramework, target) -> ABAFramework:
     rules = deepcopy(aba_framework.get_new_rules())
     for rule_id, rule in rules.items():
         if rule.head.predicate == target:
@@ -380,9 +380,7 @@ def count_new_vars(new_rule: Rule, rule_1: Rule, rule_2: Rule) -> int:
     return min(len(diff_1), len(diff_2))
 
 
-def fold_rules(
-    prolog, aba_framework: ABAFramework, predicate: str
-) -> ABAFramework:
+def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramework:
     new_rules = []
     rules = deepcopy(aba_framework.background_knowledge)
     new_vars_allowed = 0
@@ -470,12 +468,9 @@ def fold_rules(
 
             for rule_2_id, stats in fold_stats.items():
                 if stats[1] >= most_pos_ex and stats[2] <= least_neg_ex:
-                    
                     if rule_2_id not in folded or not stats[0] is None:
                         folded[rule_2_id] = True
-                        new_rule = fold(
-                            prolog, aba_framework, rule_1_id, rule_2_id
-                        )
+                        new_rule = fold(prolog, aba_framework, rule_1_id, rule_2_id)
                         performed_fold = True
                         if not stats[0] is None:
                             new_rule = fold(
@@ -568,9 +563,7 @@ def find_equiv_contrary(
     return (None, None)
 
 
-def replace_equiv_contrary(
-    prolog, aba_framework: ABAFramework, eq_a: str
-):
+def replace_equiv_contrary(prolog, aba_framework: ABAFramework, eq_a: str):
     rule_id = list(aba_framework.background_knowledge.keys())[-1]
     rule = aba_framework.background_knowledge[rule_id]
     new_atom = rule.body[-1]
@@ -580,26 +573,6 @@ def replace_equiv_contrary(
     aba_framework.assumptions = aba_framework.assumptions[:-1]
     aba_framework.contraries = aba_framework.contraries[:-1]
     set_framework(prolog, aba_framework)
-
-
-def can_still_learn(aba_framework: ABAFramework, initial_pos_ex) -> bool:
-    for pos_ex in initial_pos_ex:
-        top_rules = get_top_rules(aba_framework, pos_ex.fact)
-        safe = False
-        for r in top_rules:
-            if len(r.body) == len(r.get_equalities()):
-                if all(
-                    [
-                        eq.var_1[0].isupper() and eq.var_2[0].isupper()
-                        for eq in r.get_equalities()
-                    ]
-                ):
-                    safe = True
-            else:
-                safe = True
-        if not safe:
-            return True
-    return False
 
 
 def ensure_has_initial_neg_ex(
@@ -640,15 +613,16 @@ def set_up_iteration(
     curr_consistent,
     learned,
     prev_rem_pos_ex,
-    prev_rem_neg_ex
+    prev_rem_neg_ex,
 ):
     global NO_PROGRESS_COUNT
     if not curr_consistent:
         reintroduced = ensure_has_initial_neg_ex(prolog, aba_framework, initial_neg_ex)
         if (
             all([ex.fact in reintroduced for ex in prev_rem_neg_ex])
-            and len(prev_rem_neg_ex) > 0 and len(prev_rem_pos_ex) == 0
-        ) :
+            and len(prev_rem_neg_ex) > 0
+            and len(prev_rem_pos_ex) == 0
+        ):
             raise CredulousSemanticsException()
     if curr_complete:
         NO_PROGRESS_COUNT = 0
@@ -688,9 +662,7 @@ def select_target_and_generate_rules(prolog, aba_framework, learned, count):
 
 def generalise(prolog, aba_framework, target):
     # Generalise via folding
-    aba_framework = fold_rules(
-        prolog, aba_framework, target.get_predicate()
-    )
+    aba_framework = fold_rules(prolog, aba_framework, target.get_predicate())
     # Generalise via subsumption
     remove_subsumed(prolog, aba_framework, target.get_predicate())
 
@@ -725,11 +697,7 @@ def learn_exceptions(prolog, aba_framework, target):
         if eq_a is None:
             add_examples(prolog, aba_framework, c_a.predicate, a_plus, a_minus)
         else:
-            replace_equiv_contrary(
-                prolog,
-                aba_framework,
-                eq_a
-            )
+            replace_equiv_contrary(prolog, aba_framework, eq_a)
 
 
 def remove_iteration_examples(prolog, aba_framework: ABAFramework, target: str):
@@ -756,9 +724,7 @@ def abalearn(prolog) -> ABAFramework:
     curr_complete = complete(aba_framework, initial_pos_ex)
     curr_consistent = consistent(aba_framework, initial_neg_ex)
     initial_goal = ""
-    while not (curr_complete and curr_consistent) or can_still_learn(
-        aba_framework, initial_pos_ex
-    ):
+    while not (curr_complete and curr_consistent):
         try:
             set_up_iteration(
                 prolog,
@@ -769,7 +735,7 @@ def abalearn(prolog) -> ABAFramework:
                 curr_consistent,
                 learned,
                 prev_rem_pos_ex,
-                prev_rem_neg_ex
+                prev_rem_neg_ex,
             )
         except CredulousSemanticsException:
             break
@@ -787,11 +753,7 @@ def abalearn(prolog) -> ABAFramework:
         curr_consistent = consistent(aba_framework, initial_neg_ex)
 
     remove_redundant_assumptions(prolog, aba_framework)
-    further_generalisation(
-        prolog,
-        aba_framework,
-        initial_goal.get_predicate()
-    )
+    further_generalisation(prolog, aba_framework, initial_goal.get_predicate())
     aba_framework.create_file("solution.pl")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)
     return aba_framework
