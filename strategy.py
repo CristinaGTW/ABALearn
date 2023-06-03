@@ -380,6 +380,7 @@ def count_new_vars(new_rule: Rule, rule_1: Rule, rule_2: Rule) -> int:
     return min(len(diff_1), len(diff_2))
 
 
+
 def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramework:
     new_rules = []
     rules = deepcopy(aba_framework.background_knowledge)

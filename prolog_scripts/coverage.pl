@@ -38,6 +38,7 @@ justified([Body1|RestBody],Asm, Rules) :-
 grounded( A) :-
   argument( A,_),
   forall( attacks( X, A), defendFrom( X, [])).  
+  
 defendFrom( Attacker, OldAttackers) :-
   attacks( Defender, Attacker),
   \+ member( Attacker, OldAttackers),

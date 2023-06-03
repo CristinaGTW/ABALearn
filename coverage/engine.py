@@ -85,6 +85,7 @@ def cov_helper(aba_framework: ABAFramework, atom: Atom, asms: list[Atom], var_di
         rules = aba_framework.get_all_potential_top_rules(atom)
         var_dicts = []
         for rule in rules:
+            breakpoint()
             new_dict = var_dict | map_vars(rule.head, atom)
             cov, res_dict = rule_supports(aba_framework, rule, atom, new_dict, asms)
             if cov:
@@ -94,6 +95,7 @@ def cov_helper(aba_framework: ABAFramework, atom: Atom, asms: list[Atom], var_di
     return False, []
 
 
+@profile
 def rule_supports(aba_framework: ABAFramework, rule: Rule, atom: Atom, var_dict, asms):
     if rule.head.predicate == atom.predicate:
         eqs = rule.get_equalities()
