@@ -47,38 +47,67 @@ def consistent(aba_framework, neg_exs: list[Example]) -> bool:
     return not any([covered(aba_framework, neg_ex.fact) for neg_ex in neg_exs])
 
 
-def remove_redundant_assumptions(prolog, aba_framework: ABAFramework):
-    to_remove = []
-    for a, c_a in aba_framework.contraries:
-        req = False
-        for rule_id in aba_framework.background_knowledge:
-            if (
-                aba_framework.background_knowledge[rule_id].head.predicate
-                == c_a.predicate
-            ):
-                req = True
-                break
-        if not req:
-            to_remove.append(a.predicate)
-    for rule_id in aba_framework.background_knowledge:
-        rule = aba_framework.background_knowledge[rule_id]
-        initial_body = rule.body
-        new_body = list(
-            filter(
-                lambda b: isinstance(b, Equality)
-                or (isinstance(b, Atom) and b.predicate not in to_remove),
-                initial_body,
-            )
-        )
-        rule.body = new_body
-        aba_framework.background_knowledge[rule_id] = rule
-    aba_framework.assumptions = list(
-        filter(lambda a: a.predicate not in to_remove, aba_framework.assumptions)
-    )
-    aba_framework.contraries = list(
-        filter(lambda a: a[0].predicate not in to_remove, aba_framework.contraries)
-    )
+def remove_redundant_assumptions(prolog, aba_framework: ABAFramework, goal_predicate):
+    asm_predicates = []
+    con_predicates = []
+    used_asms = []
+    con_rules = {}
+    for a,c_a in aba_framework.contraries:
+        asm_predicates.append(a.predicate)
+        con_predicates.append(c_a.predicate)
 
+    for rule_id, rule in aba_framework.get_new_rules().items():
+        if rule.head.predicate in con_predicates:
+            con_rules[rule.head.predicate] = rule_id
+        for b in rule.get_atoms():
+            if b.predicate in asm_predicates:
+                used_asms.append(b.predicate)
+        
+    asms_to_remove = []
+    rules_to_remove = []
+    for con,rule_id in con_rules.items():
+        if con[2:] not in used_asms:
+            rules_to_remove.append(rule_id)
+    for asm in used_asms:
+        if 'c_'+asm not in con_rules:
+            asms_to_remove.append(asm)
+    
+    for rule_id in rules_to_remove:
+        aba_framework.background_knowledge.pop(rule_id)
+    
+    for rule_id, rule in aba_framework.get_new_rules().items():
+        new_rule = deepcopy(rule)
+        new_rule.body = list(filter(lambda b: isinstance(b, Equality) or (isinstance(b,Atom) and b.predicate not in asms_to_remove), rule.body))
+        aba_framework.background_knowledge[rule_id] = new_rule
+    
+    aba_framework.assumptions = list(filter(lambda asm: asm.predicate not in asms_to_remove, aba_framework.assumptions))
+    aba_framework.contraries = list(filter(lambda con: con[0].predicate not in asms_to_remove, aba_framework.contraries))
+
+    req_preds = [goal_predicate]
+    prev_req_preds = req_preds
+    required_rules = []
+    new_rules = aba_framework.get_new_rules().items()
+    while len(req_preds) > 0:
+        new_req_pred = []
+        for rule_id,rule in new_rules:
+            if rule.head.predicate in req_preds:
+                required_rules.append(rule_id)
+                for b in rule.get_atoms():
+                    if b.predicate not in prev_req_preds:
+                        if b.predicate in con_predicates:
+                            new_req_pred.append(b.predicate)
+                            new_req_pred.append(b.predicate[2:])
+                        elif b.predicate in asm_predicates:
+                            new_req_pred.append(b.predicate)
+                            new_req_pred.append('c_' + b.predicate)
+        prev_req_preds += new_req_pred
+        req_preds = new_req_pred
+    rule_ids_to_remove = []
+    for rule_id,rule in new_rules:
+        if rule_id not in required_rules:
+            rule_ids_to_remove.append(rule_id)
+    for rule_id in rule_ids_to_remove:
+        aba_framework.background_knowledge.pop(rule_id)
     set_framework(prolog, aba_framework)
 
 
@@ -378,7 +407,6 @@ def count_new_vars(new_rule: Rule, rule_1: Rule, rule_2: Rule) -> int:
     diff_1 = new_vars.difference(vars_1)
     diff_2 = new_vars.difference(vars_2)
     return min(len(diff_1), len(diff_2))
-
 
 
 def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramework:
@@ -752,8 +780,7 @@ def abalearn(prolog) -> ABAFramework:
         )
         curr_complete = complete(aba_framework, initial_pos_ex)
         curr_consistent = consistent(aba_framework, initial_neg_ex)
-
-    remove_redundant_assumptions(prolog, aba_framework)
+    remove_redundant_assumptions(prolog, aba_framework,initial_goal.get_predicate())
     further_generalisation(prolog, aba_framework, initial_goal.get_predicate())
     aba_framework.create_file("solution.pl")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)

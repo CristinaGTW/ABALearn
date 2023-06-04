@@ -20,5 +20,6 @@ if __name__ == "__main__":
         prolog = set_up_abalearn(input)
     start_time = time.time()
     aba_framework = abalearn(prolog)
+    end_time = time.time()
     print(aba_framework.get_learned_rules())
-    print("--- Learning time: %s seconds ---" % (time.time() - start_time))
+    print("--- Learning time: %s seconds ---" % (end_time - start_time))
