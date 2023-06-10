@@ -162,6 +162,7 @@ def further_generalisation(prolog, aba_framework: ABAFramework, predicate: str):
     new_vars_allowed = 0
     folded = True
     new_rules = aba_framework.get_new_rules()
+    contraries_preds = [con[1].predicate for con in aba_framework.contraries]
     while folded:
         rules = deepcopy(new_rules)
         folded = False
@@ -170,7 +171,8 @@ def further_generalisation(prolog, aba_framework: ABAFramework, predicate: str):
                 break
             for rule_2_id in rules:
                 rule_1 = rules[rule_1_id]
-                if rule_1.head.predicate == predicate:
+                rule_2 = rules[rule_2_id]
+                if rule_1.head.predicate == predicate and rule_2.head.predicate not in contraries_preds:
                     rule_2 = rules[rule_2_id]
                     if foldable(prolog, rule_1, rule_2, safe=False) and not check_loop(
                         aba_framework, predicate, rule_2
