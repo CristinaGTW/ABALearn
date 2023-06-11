@@ -1,10 +1,16 @@
 from elements.components import Atom, Rule
 
 
-def rote_learn(prolog, example_id):
-    query = f"rote_learn({example_id})."
-    q = list(prolog.query(query))
-    del q
+def rote_learn(prolog, aba_framework, example_id):
+    query = f"rote_learn({example_id},(R,H,B))."
+    q = list(prolog.query(query))[0]
+    body = ""
+    for i in range(len(q["B"])):
+        body += str(q["B"][i]) + ","
+    body = body[:-1]
+    rule_str = q["R"] + ":" + q["H"] + "<-" + body
+    new_rule = Rule.parse_rule(rule_str)
+    aba_framework.background_knowledge[new_rule.rule_id] = new_rule
 
 
 def rote_learn_all(prolog, aba_framework, predicate, arity):

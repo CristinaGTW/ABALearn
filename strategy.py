@@ -1,5 +1,6 @@
 from prolog.transformation_rules import (
     rote_learn_all,
+    rote_learn,
     undercut,
     fold,
     remove_eq,
@@ -41,8 +42,6 @@ def complete(aba_framework, pos_exs: list[Example]) -> bool:
 
 # If all negative examples in the given framework are NOT covered, return True
 # Otherwise, return False.
-
-
 def consistent(aba_framework, neg_exs: list[Example]) -> bool:
     return not any([covered(aba_framework, neg_ex.fact) for neg_ex in neg_exs])
 
@@ -743,6 +742,18 @@ def remove_iteration_examples(prolog, aba_framework: ABAFramework, target: str):
     remove_examples(prolog, aba_framework, rem_pos_ex, rem_neg_ex)
     return rem_pos_ex, rem_neg_ex
 
+def enumerate_rules(prolog, aba_framework, initial_pos_ex:list[Example]):
+    reintroduce = []
+    to_learn = []
+    for pos_ex in initial_pos_ex:
+        if not covered(aba_framework, pos_ex.fact):
+            reintroduce.append(pos_ex.fact)
+    for ex in reintroduce:
+        query = f"add_pos({ex},N)."
+        result = list(prolog.query(query))[0]
+        to_learn.append(result["N"])
+    for ex in to_learn:
+        rote_learn(prolog, aba_framework, ex)
 
 def abalearn(prolog) -> ABAFramework:
     aba_framework: ABAFramework = set_up_aba_framework(prolog)
@@ -755,6 +766,7 @@ def abalearn(prolog) -> ABAFramework:
     curr_complete = complete(aba_framework, initial_pos_ex)
     curr_consistent = consistent(aba_framework, initial_neg_ex)
     initial_goal = ""
+    credulous = False
     while not (curr_complete and curr_consistent):
         try:
             set_up_iteration(
@@ -769,6 +781,7 @@ def abalearn(prolog) -> ABAFramework:
                 prev_rem_neg_ex,
             )
         except CredulousSemanticsException:
+            credulous = True
             break
         target, count = select_target_and_generate_rules(
             prolog, aba_framework, learned, count
@@ -784,6 +797,8 @@ def abalearn(prolog) -> ABAFramework:
         curr_consistent = consistent(aba_framework, initial_neg_ex)
     remove_redundant_assumptions(prolog, aba_framework,initial_goal.get_predicate())
     further_generalisation(prolog, aba_framework, initial_goal.get_predicate())
+    if credulous:
+        enumerate_rules(prolog,aba_framework, initial_pos_ex)
     aba_framework.create_file("solution.pl")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)
     return aba_framework

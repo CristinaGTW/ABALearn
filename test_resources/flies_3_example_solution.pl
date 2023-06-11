@@ -20,10 +20,10 @@ my_rule(r18,bird(A),[A=d1]).
 my_rule(r19,light(A),[A=d1]).
 my_rule(r20,big(A),[A=d1]).
 my_rule(r_29,flies(A),[bird(A),alpha1(A)]).
-my_rule(r_54,c_alpha1(A),[big(A)]).
-my_rule(r_62,c_alpha1(A),[feathered(A),alpha2(A)]).
-my_rule(r_75,c_alpha2(A),[bird(A),alpha3(A)]).
-my_rule(r_84,c_alpha3(A),[brokenwings(A)]).
+my_rule(r_50,c_alpha1(A),[big(A)]).
+my_rule(r_58,c_alpha1(A),[feathered(A),alpha2(A)]).
+my_rule(r_69,c_alpha2(A),[bird(A),alpha3(A)]).
+my_rule(r_76,c_alpha3(A),[brokenwings(A)]).
 
 % Assumptions 
 my_asm(alpha1(A)).

@@ -13,10 +13,9 @@ def add_rule(prolog, rule: Rule) -> None:
 
 def add_pos_ex(prolog, aba_framework, ex_atom: Atom) -> None:
     query = f"add_pos({ex_atom},N)."
-    q = list(prolog.query(query))
     result = list(prolog.query(query))[0]
     aba_framework.positive_examples[result["N"]] = Example(result["N"], ex_atom)
-    del q
+
 
 
 def add_neg_ex(prolog, aba_framework, ex_atom: Atom) -> None:

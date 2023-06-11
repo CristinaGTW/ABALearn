@@ -8,7 +8,7 @@ my_rule(r6,step(A,B),[A=5,B=2]).
 my_rule(r7,busy(A),[A=3]).
 my_rule(r8,busy(A),[A=6]).
 my_rule(r_64,free(A),[step(A,B),alpha1(A,B)]).
-my_rule(r_73,c_alpha1(A,B),[busy(B)]).
+my_rule(r_72,c_alpha1(A,B),[busy(B)]).
 
 % Assumptions 
 my_asm(alpha1(A,B)).
