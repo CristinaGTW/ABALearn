@@ -3,10 +3,12 @@ from elements.aba_framework import ABAFramework
 from csv_parsing.csv_utils import row_to_learning_problem
 
 
-def parse_dataset(data_file, label):
+def parse_dataset(data_file):
     all_rules = {}
     pos_exs = {}
     neg_exs = {}
+    label = data_file.split('/')[-1]
+    label = label[:-4]
     with open(data_file) as f:
         reader = csv.reader(f)
         headers = next(reader)

@@ -14,8 +14,8 @@ DATASETS_FILE_MAP = {
 
 if __name__ == "__main__":
     input = sys.argv[1]
-    if input in DATASETS_FILE_MAP:
-        prolog = set_up_abalearn(parse_dataset(DATASETS_FILE_MAP[input], input))
+    if input[-4:] == '.csv':
+        prolog = set_up_abalearn(parse_dataset(input))
     else:
         prolog = set_up_abalearn(input)
     start_time = time.time()
