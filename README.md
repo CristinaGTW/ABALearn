@@ -21,6 +21,7 @@ python abalearn.py <input_file_path>
     > Example: `my_asm(alpha1(X)).`
     * *Contrary mapping:*  `contrary(Asm,CAsm).` 
     > Example: `contrary(alpha1(X),c_alpha1(X)).`
+    
     __Training Data:__
     * *Positive example:* `pos(ExId, Ex).`
     > Example: `pos(p1,flies(a)).`
