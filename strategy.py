@@ -130,7 +130,6 @@ def get_solutions(aba_framework, rule: Rule) -> list[tuple[str, ...]]:
 
 
 def further_generalisation(prolog, aba_framework: ABAFramework, predicate: str):
-    print("Attempting to further generalise...")
     new_vars_allowed = 0
     folded = True
     new_rules = aba_framework.get_new_rules()
@@ -160,7 +159,6 @@ def further_generalisation(prolog, aba_framework: ABAFramework, predicate: str):
                             set_framework(prolog, prev_framework)
                             aba_framework = prev_framework
                         else:
-                            print(f"Folding rule {rule_1} with rule {rule_2}")
                             new_rules.pop(rule_1_id)
                             new_rules[new_rule.rule_id] = new_rule
                             folded = True
@@ -189,7 +187,6 @@ def remove_subsumed(prolog, aba_framework: ABAFramework, target) -> ABAFramework
             sols_without_rule = [tuple(sol.values()) for sol in sols_without_rule]
             if set(sols).issubset(set(sols_without_rule)) and len(sols) > 0:
                 rem_rule(prolog, rule_id)
-                print(f"Removing rule {rule} as it is subsumed by some other rule")
             else:
                 aba_framework.background_knowledge[rule_id] = rule
                 for accepted in removed_arguments:
@@ -334,9 +331,6 @@ def select_target(exs: list[Example], learned: list[Example]) -> Example | None:
 
 
 def generate_rules(prolog, aba_framework, ex: Example) -> ABAFramework:
-    print(
-        f'Applying "Rote Learning" to build rules for the predicate {ex.get_predicate()}.'
-    )
     new_rules = rote_learn_all(
         prolog, aba_framework, ex.get_predicate(), ex.get_arity()
     )
@@ -502,11 +496,7 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramew
                             )
                             performed_fold = True
                             aba_framework.adjust_arguments(rule_1_id)
-                            print(f"Folding rule {rule_1_id} with rule {rule_2_id}")
                             if not stats[0] is None:
-                                print(
-                                    f"Folding rule {new_rule.rule_id} with rule {stats[0]}"
-                                )
                                 aba_framework.adjust_arguments(new_rule.rule_id)
                                 new_rule = fold(
                                     prolog,
@@ -542,7 +532,6 @@ def fold_rules(prolog, aba_framework: ABAFramework, predicate: str) -> ABAFramew
 
 
 def assumption_introduction(prolog, aba_framework, rule, atom_pos) -> ABAFramework:
-    print(f"Performing assumption introduction on rule {rule}")
     undercut(prolog, aba_framework, rule.rule_id, [pos + 1 for pos in atom_pos])
 
 
@@ -550,10 +539,8 @@ def remove_examples(prolog, aba_framework, pos_exs, neg_exs) -> ABAFramework:
     pos_exs_copy = deepcopy(list(pos_exs))
     neg_exs_copy = deepcopy(list(neg_exs))
     for pos_ex in pos_exs_copy:
-        print(f"Removing example {pos_ex}")
         rem_pos_ex(prolog, aba_framework, pos_ex.example_id)
     for neg_ex in neg_exs_copy:
-        print(f"Removing example {neg_ex}")
         rem_neg_ex(prolog, aba_framework, neg_ex.example_id)
 
 
@@ -611,9 +598,6 @@ def find_equiv_contrary(
 
 
 def replace_equiv_contrary(prolog, aba_framework: ABAFramework, eq_a: str):
-    print(
-        f"Replacing the last introduced assumption with {eq_a} as they are equivalent"
-    )
     rule_id = list(aba_framework.background_knowledge.keys())[-1]
     rule = aba_framework.background_knowledge[rule_id]
     new_atom = rule.body[-1]
@@ -634,7 +618,6 @@ def ensure_has_initial_neg_ex(
             if neg_ex.fact not in [
                 ex.fact for ex in list(aba_framework.negative_examples.values())
             ]:
-                print(f"Reintroducing:")
                 add_neg_ex(prolog, aba_framework, neg_ex.fact)
                 reintroduced.append(neg_ex.get_predicate())
 
@@ -650,7 +633,6 @@ def ensure_has_initial_pos_ex(
             if pos_ex.fact not in [
                 ex.fact for ex in aba_framework.positive_examples.values()
             ]:
-                print(f"Reintroducing:")
                 add_pos_ex(prolog, aba_framework, pos_ex.fact)
                 reintroduced.append(pos_ex)
     return reintroduced
@@ -783,7 +765,6 @@ def abalearn(prolog) -> ABAFramework:
                 prev_rem_pos_ex,
             )
         except CredulousSemanticsException:
-            print("Goal achieved under credulous semantics!")
             break
         target, count = select_target_and_generate_rules(
             prolog, aba_framework, learned, count
@@ -799,17 +780,8 @@ def abalearn(prolog) -> ABAFramework:
         curr_complete = complete(aba_framework, initial_pos_ex)
         curr_consistent = consistent(aba_framework, initial_neg_ex)
 
-    print("Successfuly completed learning process!")
-
     remove_redundant_assumptions(prolog, aba_framework)
     further_generalisation(prolog, aba_framework, initial_goal.get_predicate())
     aba_framework.create_file("solution.pl")
-    print("Finished.")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)
     return aba_framework
-
-
-if __name__ == "__main__":
-    input_file_path = sys.argv[1]
-    prolog = set_up_abalearn(input_file_path)
-    abalearn(prolog)
