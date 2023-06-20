@@ -755,6 +755,38 @@ def enumerate_rules(prolog, aba_framework, initial_pos_ex:list[Example]):
     for ex in to_learn:
         rote_learn(prolog, aba_framework, ex)
 
+def get_attacker(aba_framework:ABAFramework, atom:Atom, ex):
+    c_atom = ''
+    for a,c_a in aba_framework.contraries:
+        if a.predicate == atom.predicate:
+            c_atom = c_a.predicate
+    if c_atom != '':
+        attacker = Atom(c_atom, ex.arguments)
+        return attacker
+
+
+
+def attack_rules(prolog, aba_framework:ABAFramework, initial_neg_ex:list[Example]):
+    cov_neg_ex = []
+    for neg_ex in initial_neg_ex:
+        if covered(aba_framework, neg_ex.fact):
+            cov_neg_ex.append(neg_ex.fact)
+    
+    to_learn = []
+    for ex in cov_neg_ex:
+        top_rules = get_top_rules(aba_framework, ex)
+        for rule in top_rules:
+            for b in rule.body:
+                if isinstance(b, Atom) and b.predicate in [asm.predicate for asm in aba_framework.assumptions]:
+                    attacker = get_attacker(aba_framework, b, ex)
+                    if not attacker is None:
+                        query = f"add_pos({attacker},N)."
+                        result = list(prolog.query(query))[0]
+                        to_learn.append(result["N"])
+    for ex in to_learn:
+        rote_learn(prolog, aba_framework, ex)  
+
+
 def abalearn(prolog) -> ABAFramework:
     aba_framework: ABAFramework = set_up_aba_framework(prolog)
     initial_pos_ex: list[Example] = list(aba_framework.positive_examples.values())
@@ -799,6 +831,7 @@ def abalearn(prolog) -> ABAFramework:
     further_generalisation(prolog, aba_framework, initial_goal.get_predicate())
     if credulous:
         enumerate_rules(prolog,aba_framework, initial_pos_ex)
+        attack_rules(prolog, aba_framework, initial_neg_ex)
     aba_framework.create_file("solution.pl")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)
     return aba_framework
