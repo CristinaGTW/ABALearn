@@ -835,9 +835,3 @@ def abalearn(prolog) -> ABAFramework:
     aba_framework.create_file("solution.pl")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)
     return aba_framework
-
-
-if __name__ == "__main__":
-    input_file_path = sys.argv[1]
-    prolog = set_up_abalearn(input_file_path)
-    abalearn(prolog)
