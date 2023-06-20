@@ -7,7 +7,7 @@ def parse_dataset(data_file):
     all_rules = {}
     pos_exs = {}
     neg_exs = {}
-    label = data_file.split('/')[-1]
+    label = data_file.split("/")[-1]
     label = label[:-4]
     with open(data_file) as f:
         reader = csv.reader(f)

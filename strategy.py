@@ -51,7 +51,7 @@ def remove_redundant_assumptions(prolog, aba_framework: ABAFramework, goal_predi
     con_predicates = []
     used_asms = []
     con_rules = {}
-    for a,c_a in aba_framework.contraries:
+    for a, c_a in aba_framework.contraries:
         asm_predicates.append(a.predicate)
         con_predicates.append(c_a.predicate)
 
@@ -61,26 +61,40 @@ def remove_redundant_assumptions(prolog, aba_framework: ABAFramework, goal_predi
         for b in rule.get_atoms():
             if b.predicate in asm_predicates:
                 used_asms.append(b.predicate)
-        
+
     asms_to_remove = []
     rules_to_remove = []
-    for con,rule_id in con_rules.items():
+    for con, rule_id in con_rules.items():
         if con[2:] not in used_asms:
             rules_to_remove.append(rule_id)
     for asm in used_asms:
-        if 'c_'+asm not in con_rules:
+        if "c_" + asm not in con_rules:
             asms_to_remove.append(asm)
-    
+
     for rule_id in rules_to_remove:
         aba_framework.background_knowledge.pop(rule_id)
-    
+
     for rule_id, rule in aba_framework.get_new_rules().items():
         new_rule = deepcopy(rule)
-        new_rule.body = list(filter(lambda b: isinstance(b, Equality) or (isinstance(b,Atom) and b.predicate not in asms_to_remove), rule.body))
+        new_rule.body = list(
+            filter(
+                lambda b: isinstance(b, Equality)
+                or (isinstance(b, Atom) and b.predicate not in asms_to_remove),
+                rule.body,
+            )
+        )
         aba_framework.background_knowledge[rule_id] = new_rule
-    
-    aba_framework.assumptions = list(filter(lambda asm: asm.predicate not in asms_to_remove, aba_framework.assumptions))
-    aba_framework.contraries = list(filter(lambda con: con[0].predicate not in asms_to_remove, aba_framework.contraries))
+
+    aba_framework.assumptions = list(
+        filter(
+            lambda asm: asm.predicate not in asms_to_remove, aba_framework.assumptions
+        )
+    )
+    aba_framework.contraries = list(
+        filter(
+            lambda con: con[0].predicate not in asms_to_remove, aba_framework.contraries
+        )
+    )
 
     req_preds = [goal_predicate]
     prev_req_preds = req_preds
@@ -88,7 +102,7 @@ def remove_redundant_assumptions(prolog, aba_framework: ABAFramework, goal_predi
     new_rules = aba_framework.get_new_rules().items()
     while len(req_preds) > 0:
         new_req_pred = []
-        for rule_id,rule in new_rules:
+        for rule_id, rule in new_rules:
             if rule.head.predicate in req_preds:
                 required_rules.append(rule_id)
                 for b in rule.get_atoms():
@@ -98,11 +112,11 @@ def remove_redundant_assumptions(prolog, aba_framework: ABAFramework, goal_predi
                             new_req_pred.append(b.predicate[2:])
                         elif b.predicate in asm_predicates:
                             new_req_pred.append(b.predicate)
-                            new_req_pred.append('c_' + b.predicate)
+                            new_req_pred.append("c_" + b.predicate)
         prev_req_preds += new_req_pred
         req_preds = new_req_pred
     rule_ids_to_remove = []
-    for rule_id,rule in new_rules:
+    for rule_id, rule in new_rules:
         if rule_id not in required_rules:
             rule_ids_to_remove.append(rule_id)
     for rule_id in rule_ids_to_remove:
@@ -171,7 +185,10 @@ def further_generalisation(prolog, aba_framework: ABAFramework, predicate: str):
             for rule_2_id in rules:
                 rule_1 = rules[rule_1_id]
                 rule_2 = rules[rule_2_id]
-                if rule_1.head.predicate == predicate and rule_2.head.predicate not in contraries_preds:
+                if (
+                    rule_1.head.predicate == predicate
+                    and rule_2.head.predicate not in contraries_preds
+                ):
                     rule_2 = rules[rule_2_id]
                     if foldable(prolog, rule_1, rule_2, safe=False) and not check_loop(
                         aba_framework, predicate, rule_2
@@ -742,7 +759,8 @@ def remove_iteration_examples(prolog, aba_framework: ABAFramework, target: str):
     remove_examples(prolog, aba_framework, rem_pos_ex, rem_neg_ex)
     return rem_pos_ex, rem_neg_ex
 
-def enumerate_rules(prolog, aba_framework, initial_pos_ex:list[Example]):
+
+def enumerate_rules(prolog, aba_framework, initial_pos_ex: list[Example]):
     reintroduce = []
     to_learn = []
     for pos_ex in initial_pos_ex:
@@ -755,36 +773,38 @@ def enumerate_rules(prolog, aba_framework, initial_pos_ex:list[Example]):
     for ex in to_learn:
         rote_learn(prolog, aba_framework, ex)
 
-def get_attacker(aba_framework:ABAFramework, atom:Atom, ex):
-    c_atom = ''
-    for a,c_a in aba_framework.contraries:
+
+def get_attacker(aba_framework: ABAFramework, atom: Atom, ex):
+    c_atom = ""
+    for a, c_a in aba_framework.contraries:
         if a.predicate == atom.predicate:
             c_atom = c_a.predicate
-    if c_atom != '':
+    if c_atom != "":
         attacker = Atom(c_atom, ex.arguments)
         return attacker
 
 
-
-def attack_rules(prolog, aba_framework:ABAFramework, initial_neg_ex:list[Example]):
+def attack_rules(prolog, aba_framework: ABAFramework, initial_neg_ex: list[Example]):
     cov_neg_ex = []
     for neg_ex in initial_neg_ex:
         if covered(aba_framework, neg_ex.fact):
             cov_neg_ex.append(neg_ex.fact)
-    
+
     to_learn = []
     for ex in cov_neg_ex:
         top_rules = get_top_rules(aba_framework, ex)
         for rule in top_rules:
             for b in rule.body:
-                if isinstance(b, Atom) and b.predicate in [asm.predicate for asm in aba_framework.assumptions]:
+                if isinstance(b, Atom) and b.predicate in [
+                    asm.predicate for asm in aba_framework.assumptions
+                ]:
                     attacker = get_attacker(aba_framework, b, ex)
                     if not attacker is None:
                         query = f"add_pos({attacker},N)."
                         result = list(prolog.query(query))[0]
                         to_learn.append(result["N"])
     for ex in to_learn:
-        rote_learn(prolog, aba_framework, ex)  
+        rote_learn(prolog, aba_framework, ex)
 
 
 def abalearn(prolog) -> ABAFramework:
@@ -827,10 +847,10 @@ def abalearn(prolog) -> ABAFramework:
         )
         curr_complete = complete(aba_framework, initial_pos_ex)
         curr_consistent = consistent(aba_framework, initial_neg_ex)
-    remove_redundant_assumptions(prolog, aba_framework,initial_goal.get_predicate())
+    remove_redundant_assumptions(prolog, aba_framework, initial_goal.get_predicate())
     further_generalisation(prolog, aba_framework, initial_goal.get_predicate())
     if credulous:
-        enumerate_rules(prolog,aba_framework, initial_pos_ex)
+        enumerate_rules(prolog, aba_framework, initial_pos_ex)
         attack_rules(prolog, aba_framework, initial_neg_ex)
     aba_framework.create_file("solution.pl")
     get_stats(aba_framework, initial_pos_ex, initial_neg_ex)
