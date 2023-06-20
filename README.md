@@ -13,7 +13,7 @@ python abalearn.py <input_file_path>
 ## Input file format:
 * ### Prolog file:
     See `small_examples\` for examples. \
-    Specify an ABA learning problem with ground facts as follows:\
+    Specify an ABA learning problem as follows:\
     __Background Knowledge:__
     * *Rule:*  `my_rule(RuleId,Head,Body).` 
     > Example: `my_rule(r1, siblings(X,Y),[mom(A,X), mom(B,Y), A=B]).`
@@ -23,9 +23,9 @@ python abalearn.py <input_file_path>
     > Example: `contrary(alpha1(X),c_alpha1(X)).`
     
     __Training Data:__
-    * *Positive example:* `pos(ExId, Ex).`
+    * *Positive example:* `pos(ExId,Ex).`
     > Example: `pos(p1,flies(a)).`
-    * *Negative example:* `neg(ExId, Ex).`
+    * *Negative example:* `neg(ExId,Ex).`
     > Example: `neg(n1,flies(c)).`
         
 * ### Tabular data (CSV file):
